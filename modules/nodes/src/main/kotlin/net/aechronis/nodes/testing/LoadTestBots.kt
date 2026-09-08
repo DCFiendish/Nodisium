@@ -6,6 +6,7 @@ import net.aechronis.nodes.objects.Territory
 import net.aechronis.nodes.objects.TerritoryId
 import net.aechronis.nodes.objects.Town
 import net.minestom.server.MinecraftServer
+import net.minestom.server.event.EventNode
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
@@ -51,9 +52,13 @@ object LoadTestBots {
     private const val TOWN_A_HOME_TERRITORY = 440
     private const val TOWN_B_HOME_TERRITORY = 275
 
+    // Own eventNode (same convention as PvpKit) so stop() can detach it explicitly on a
+    // hot-reload instead of leaking a duplicate listener on the global handler.
+    private val eventNode = EventNode.all("load-test-bots")
+
     fun init() {
         ensureTestTownsExist()
-        MinecraftServer.getGlobalEventHandler().addListener(PlayerSpawnEvent::class.java) { event ->
+        eventNode.addListener(PlayerSpawnEvent::class.java) { event ->
             val player = event.player
             val suffix = botNameRegex.matchEntire(player.username)?.groupValues?.get(1)?.toIntOrNull()
                 ?: return@addListener
@@ -72,6 +77,11 @@ object LoadTestBots {
 
             player.inventory.setItemStack(0, ItemStack.of(Material.OAK_FENCE))
         }
+        MinecraftServer.getGlobalEventHandler().addChild(eventNode)
+    }
+
+    fun stop() {
+        MinecraftServer.getGlobalEventHandler().removeChild(eventNode)
     }
 
     private fun ensureTestTownsExist() {

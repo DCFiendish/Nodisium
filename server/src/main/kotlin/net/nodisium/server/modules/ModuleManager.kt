@@ -140,11 +140,16 @@ object ModuleManager {
                 ?: error("Cannot load '$id': its dependency '$dependencyId' is not currently loaded")
         }
         val classLoader = ModuleClassLoader(jarPath.toUri().toURL(), dependencyLoaders)
-        val instance = Class.forName(descriptor.implementationClass, true, classLoader)
-            .getDeclaredConstructor()
-            .newInstance() as HotSwappableModule
-        instance.initialize(context)
-        generations[id] = Generation(classLoader, instance)
+        try {
+            val instance = Class.forName(descriptor.implementationClass, true, classLoader)
+                .getDeclaredConstructor()
+                .newInstance() as HotSwappableModule
+            instance.initialize(context)
+            generations[id] = Generation(classLoader, instance)
+        } catch (e: Throwable) {
+            classLoader.close()
+            throw e
+        }
     }
 
     // Callers must hold `lock`.
