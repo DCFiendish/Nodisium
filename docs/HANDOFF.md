@@ -1,4 +1,4 @@
-# Handoff — Nodisium project status (2026-08-06, reverted 2026-08-25, nodes/vanilla ported 2026-08-25/26, monorepo migration + combat built 2026-08-26, combat hardened + spark added 2026-09-02, worldedit ported + pvp playtest prep + VM right-sized 2026-09-02, nodes bug audit re-checked against current code 2026-09-02)
+# Handoff — Nodisium project status (2026-08-06, reverted 2026-08-25, nodes/vanilla ported 2026-08-25/26, monorepo migration + combat built 2026-08-26, combat hardened + spark added 2026-09-02, worldedit ported + pvp playtest prep + VM right-sized 2026-09-02, nodes bug audit re-checked against current code 2026-09-02, local IntelliJ run investigated 2026-09-06, hot-swappable module system added 2026-09-07, utils audited + partially vendored 2026-09-07/08)
 
 Deep background (library internals, design rationale) is in `RESEARCH.md`, `NODES_DEEP_DIVE.md`,
 `VANILLA_DEEP_DIVE.md`, `COMBAT_DEEP_DIVE.md`, and `research-todo/*.md` — not repeated here. This
@@ -17,19 +17,19 @@ Current state:
 
 - **Real terrain is gone.** Both terrain sources tried (`AgadirWorld.kt`'s `AnvilLoader` over a
   trimmed Anvil download, `EuropeTerrain.kt`'s procedural NOAA/WWF-heightmap generator) are deleted,
-  along with the ~1.5GB `morellia-data/world/` region files and the `europe/heightmap.bin`/
+  along with the ~1.5GB `nodisium-data/world/` region files and the `europe/heightmap.bin`/
   `biome.bin` resources. The server runs on plain flat stone superflat (`StoneFlatTerrain`) as the
   deliberate baseline while terrain gets replanned. See `research-todo/04-world-and-data-architecture.md`.
 - **The real-geodata border/territory pipeline never touched this repo's local data anyway** — it
   only ever wrote to the production server's own `nodes` JSON files over SSH. Local
-  `morellia-data/nodes/` still holds (and keeps) the original small 2-town flat-world test fixture.
+  `nodisium-data/nodes/` still holds (and keeps) the original small 2-town flat-world test fixture.
 - **The custom Blockbench musket model is abandoned.** `models/flintlock_musket/` is being replaced
   by sourcing public/CC0 models for a full asset overhaul (weapons, vehicles, buildings, uniforms).
   It was never actually wired into the game either way (`TestWeapons.kt` always fell back to base
   `Material`).
 - **`ResourcePack.kt` no longer points at the production VM** — moved to a localhost URL; the
   resource pack itself will be rebuilt once sourced assets exist.
-- **Guardrail for this phase: no deploys to the Oracle VM** (see `.claude/skills/morellia-ops/SKILL.md`, gitignored, for connection details). Everything is
+- **Guardrail for this phase: no deploys to the Oracle VM** (see `.claude/skills/nodisium-ops/SKILL.md`, gitignored, for connection details). Everything is
   local-only until the replan is far enough along to redeploy. GitHub pushes are unaffected.
 - The 1911 Agadir Crisis **theme/design intent itself is not abandoned** — the theme section right
   below still describes the target setting. What's gone is the concrete real-world terrain and
@@ -137,7 +137,7 @@ project actually owns.
 - **Not yet decommissioned**: `DCFiendish/nodes`/`DCFiendish/vanilla` still exist as live repos on
   GitHub — plan is to archive (not delete) them once this migration itself is confirmed solid, but
   that's a separate, explicit-confirmation step, not done as part of this pass.
-- **Not yet updated**: `morellia-ops`'s `SKILL.md` deploy playbook still describes the old
+- **Not yet updated**: `nodisium-ops`'s `SKILL.md` deploy playbook still describes the old
   push-fork → wait-for-CI → bump-pin flow for nodes/vanilla — needs rewriting to match (the
   `Aechronis/combat`/`utils` external-dependency steps are unaffected).
 
@@ -201,7 +201,7 @@ working tree (`modules/combat/`, plus edits to `FlagWar.kt`, `TestWeapons.kt`, `
   field-gun loadout on every spawn/respawn; `TestMeleeTarget.kt` spawns a stationary 500-HP zombie
   near spawn (no AI attached, so it just stands still) that respawns itself 3s after dying.
 - **Live-tested for real, not just compiled**: a separate bare Fabric dev-client project (outside
-  this repo — see the `morellia-testclient` reference memory for exact setup/gotchas) connected to
+  this repo — see the `nodisium-testclient` reference memory for exact setup/gotchas) connected to
   the local server and loaded into the world with the loadout/dummy present. Fire/reload/melee/ADS
   themselves haven't been played through by a human yet — that's the actual next verification step,
   not asset work.
@@ -256,7 +256,7 @@ models), and three melee knives (**US Trench Knife**, **Nahkampfmesser**, **Cout
 the knives are all placeholder substitutions using the pack's bayonet models (no real trench-knife
 assets exist in the source pack), flagged in CREDITS.md to replace later. All wired into
 `TestWeapons.kt`/`DevLoadout.kt` and confirmed rendering correctly in the dev test client (see
-`morellia-testclient` reference memory).
+`nodisium-testclient` reference memory).
 
 **ADS work, done and working:**
 - `Gun.adsVignette` now defaults to `false` (was `true`) — the full-screen pumpkin-vignette
@@ -282,8 +282,8 @@ in-game** — aiming the musket looks pixel-identical to the normal hip-fire hol
 Debugged extensively, ruled out the obvious causes:
 - **Server-side swap is confirmed correct.** Added a temp `println` in `Gun.refreshModel` (still in
   the code, marked `TEMP DEBUG` — remove once this is fixed) that logs the exact model string being
-  applied. Confirmed via live server log: `aiming=true currentComponent=morellia:musket
-  targetModel=morellia:musket-aiming` fires correctly every time the player aims, and reverts
+  applied. Confirmed via live server log: `aiming=true currentComponent=nodisium:musket
+  targetModel=nodisium:musket-aiming` fires correctly every time the player aims, and reverts
   correctly on release.
 - **The resource pack served over HTTP genuinely contains the new transform values** — downloaded
   the live `resourcepack.zip` from `localhost:8000` directly and inspected the bytes inside
@@ -291,7 +291,7 @@ Debugged extensively, ruled out the obvious causes:
 - **The item-model swap mechanism itself works fine for a genuinely different target.** Two direct
   tests, both confirmed visually by the user: temporarily setting the musket's `itemModelAiming` to
   `minecraft:diamond_sword` correctly turned it into a diamond sword on aim; setting it to
-  `morellia:us_trench_knife` (an existing, already-working custom model) correctly turned it into
+  `nodisium:us_trench_knife` (an existing, already-working custom model) correctly turned it into
   the knife. So swapping to *any other* model — vanilla or custom — renders correctly and
   immediately, no reconnect needed.
 - **Only `musket-aiming.json` specifically — a near-byte-identical clone of `musket.json`'s own
@@ -316,7 +316,7 @@ change to defeat whatever comparison the client is doing (rounding/quantization 
 3. If a substantially different `elements` array *still* doesn't render differently, the dedup
    theory is wrong and this needs a fresh angle — worth re-checking whether this is a known bug/
    quirk specific to Minecraft 26.2's very recent, still-unofficial model pipeline (see the
-   `morellia-testclient` reference memory — this version already has other known-unusual behavior:
+   `nodisium-testclient` reference memory — this version already has other known-unusual behavior:
    no official/Yarn mappings, `quickPlayMultiplayer` host/port parsing bug, etc.).
 4. Also worth checking Aechronis's actual `ak47`/`ak47-aiming` pair for whether their two files'
    `elements` arrays are meaningfully geometrically different from each other (not just their
@@ -416,7 +416,7 @@ Direct continuation of the entry above, same day.
   regardless of Claude Code session state): the Nodisium server (`:server:run`, restarted several
   times this session, currently serving the resource pack with Springfield's Blockbench-edited
   value), `jwebserver -p 8000` from `server/` serving `resourcepack.zip`, and a Fabric dev client
-  (`morellia-testclient`, username `devtest`) connected to `localhost:25567`. Blockbench itself is
+  (`nodisium-testclient`, username `devtest`) connected to `localhost:25567`. Blockbench itself is
   also open, with its MCP plugin enabled and listening on port 3000.
 
 ## Status update (2026-08-29): WW1 weapon asset-sourcing research, no model work done yet
@@ -488,7 +488,7 @@ Blockbench yet, the `objcubed.js` plugin hasn't been loaded, and no obj³ export
    `assets/minecraft/shaders/core/*`, and that diff needs review against the existing pack
    structure (particularly whether it clobbers the existing item-override entries documented in
    the 2026-08-26 "musket has a real model" status update above) before merging for real.
-6. Test standalone in the `morellia-testclient` dev client before merging into `resourcepack/`.
+6. Test standalone in the `nodisium-testclient` dev client before merging into `resourcepack/`.
 7. Add a `resourcepack/CREDITS.md` entry for the Kar98K (TastyTony, CC-BY 4.0) per the existing
    per-asset credit policy — same pattern as the existing memava MIT-pack entries.
 
@@ -534,11 +534,11 @@ live in **`tools/agadir-mapgen/README.md`** — this entry is a summary, not a r
   0-255, a flat array indexed directly by `y` with no offset math, silently broken
   (index-out-of-bounds or dead below y=0) against real modern height. Fixed and confirmed
   compiling clean.
-- **`AgadirWorld.kt` recreated** pointing at `morellia-data/world` (gitignored, ~230MB, not
+- **`AgadirWorld.kt` recreated** pointing at `nodisium-data/world` (gitignored, ~230MB, not
   committed — regenerate via `tools/agadir-mapgen/` if missing). `Main.kt`'s spawn point is the
   real box's true center (confirmed by scanning exported `.mca` chunk headers directly — the
   box is **not** centered on the origin), not (0,0).
-- **Verified working end-to-end**: booted locally, connected via the `morellia-testclient`
+- **Verified working end-to-end**: booted locally, connected via the `nodisium-testclient`
   Fabric dev client, confirmed real varying elevation (not the flat-stone fallback) at multiple
   points, confirmed clean boot with zero "Unknown block" errors after the grass-name patch.
 - **User feedback mid-session, not yet acted on**: raw/unsmoothed terrain looked rough (fixed —
@@ -656,7 +656,7 @@ gotten as far as having it sitting in Downloads, nothing imported yet.
   `KHR_materials_pbrSpecularGlossiness` extension, which Blockbench doesn't read at all, so nothing
   comes in textured/colored — unrelated to the scale bug, just means every import from this creator
   will need its color baked in separately from the raw `diffuseFactor` values.
-- **Current state**: `resourcepack/assets/morellia/models/item/kar98k-import.bbmodel` has the
+- **Current state**: `resourcepack/assets/nodisium/models/item/kar98k-import.bbmodel` has the
   corrected geometry (all 47 parts rebuilt with correct world-space positions, rescaled to match
   `springfield.json`'s existing unit convention — real Kar98k and Springfield 1903 are almost
   exactly the same real-world length, so the same target scale applies) and is now colored: baked
@@ -815,9 +815,9 @@ recentering/grip-point effort above was building toward.
   dev server (a stale detached-launch process from an earlier point in the session had to be killed
   first — `netstat`/`Get-Process` by port, not assumed), and relaunched the test client as
   `devtest2`.
-  - **Tooling note**: launching either the server or the `morellia-testclient` gradle wrapper via
+  - **Tooling note**: launching either the server or the `nodisium-testclient` gradle wrapper via
     the Bash tool's `cmd //c` wrapper silently fails ("gradlew.bat not recognized") whenever the
-    working directory contains a space (`Minecraft Dev\morellia-testclient` specifically) — `cd`/
+    working directory contains a space (`Minecraft Dev\nodisium-testclient` specifically) — `cd`/
     `dir`/`where` all work fine through the same wrapper, only the actual batch-file execution
     breaks, root cause not fully identified. The PowerShell tool's `Start-Process` does not have
     this problem; use it for anything launched from a path with a space.
@@ -907,7 +907,7 @@ miss-distance-at-range math, not just vibes) while standing/crouched stays pinpo
 
 Direct continuation of `modules/combat` polish. Four separate asks in one session, landed as three
 commits (`e5803812`, `92fe45ae`, `c429a29e`, `80f33762`) plus a live Panel-side config change —
-each rebuilt, boot-tested locally via the `morellia-testclient` dev client and/or a bare local
+each rebuilt, boot-tested locally via the `nodisium-testclient` dev client and/or a bare local
 server run, then deployed to the VM (jar swap + `.bak` backup + container restart + clean-boot log
 check) before moving to the next.
 
@@ -950,7 +950,7 @@ check) before moving to the next.
 - **Spark performance profiler added**: [`LooFifteen/spark`](https://github.com/LooFifteen/spark)'s
   Minestom port (`dev.lu15:spark-minestom:1.10-SNAPSHOT`, only version published to
   `repo.hypera.dev`), wired into `Main.kt` — self-registers `/spark` (profiler flame graphs via
-  `spark.lucko.me`, `tps`/`health`/`gc` one-shot reports), gated behind the same `morellia.<node>`
+  `spark.lucko.me`, `tps`/`health`/`gc` one-shot reports), gated behind the same `nodisium.<node>`
   permission convention (backed by `net.aechronis:utils`'s `hasPermission`) every other admin
   command here already uses — no new permission model introduced. Confirmed on the VM's Linux
   container that it loads the real native `async-profiler` engine (better flame graphs than the
@@ -963,7 +963,7 @@ check) before moving to the next.
   container-level `STARTUP` env var isn't something `docker restart` can change; only a
   Panel-driven restart makes Wings recreate the container against the new command. Confirmed via a
   new container ID (`d0aa9ac8aa3b`) after the user restarted from the console, and the resolved
-  `STARTUP` env showing `-Dminestom.dispatcher-threads=4`. `server/morellia-egg.json`'s own
+  `STARTUP` env showing `-Dminestom.dispatcher-threads=4`. `server/nodisium-egg.json`'s own
   `startup` field updated to match, so a future re-import of the egg carries this forward.
   **Real risk flagged, not yet acted on**: this is exactly the condition under which non-thread-safe
   code elsewhere would start racing for real — see "still open" below.
@@ -1065,7 +1065,7 @@ timing-dependent by nature — hard to assert deterministically without a stress
 session didn't build). Verification was build + existing test suite (only the pre-existing
 `ore sampler`/Windows-file-lock/`MovementAntiCheatTest` flakes, reproduced identically against each
 unmodified baseline via `git stash` before trusting them as pre-existing) + a clean local boot with
-real `morellia-data/nodes` world data loaded (2 towns/2 nations/plots) before each deploy.
+real `nodisium-data/nodes` world data loaded (2 towns/2 nations/plots) before each deploy.
 
 ## Status update (2026-09-02, continued): pvp playtest prep — spawn bug, worldedit ported, VM right-sized
 
@@ -1087,7 +1087,7 @@ to be `[24.0, 65.0, 24.0]`. First join worked fine (that path never consults tow
 only death respawn was affected.
 
 **Fix, not a data patch**: `TownA`/`TownB`/`NationA`/`NationB` were wiped from the live
-`morellia-data/nodes` save on the VM, and — since `LoadTestBots.kt`'s `createTownIfMissing` would
+`nodisium-data/nodes` save on the VM, and — since `LoadTestBots.kt`'s `createTownIfMissing` would
 just recreate them on the next boot regardless — `LoadTestBots.init()` itself is now commented out
 in `Main.kt` (`aad2aa8c`). Confirmed via boot log: `Towns: 0, Nations: 0` and stays that way across
 restarts now.
@@ -1121,7 +1121,7 @@ dispatch, actor/world adapters).
   `ModuleContext`, their own `/modules list`/`enable`/`disable`/`reload` commands). Adapted off it:
   deleted `WorldEditModule.kt` (their module-manager entry point), replaced `ModuleEvents.addChild`
   with a plain `EventNode.addChild` call in `MinestomPlatform.kt`. Wired directly via
-  `MinestomWorldEdit().init(WorldEditConfig(dataFolder = File("morellia-data/worldedit")))` in
+  `MinestomWorldEdit().init(WorldEditConfig(dataFolder = File("nodisium-data/worldedit")))` in
   `Main.kt`, same convention as `Vanilla.init()`/`Nodes.initialize()`/`Combat.initialize()`.
 - `build.gradle.kts`: their `moduleApi` config (doesn't exist here) → plain `api`;
   `compileOnly(project(":server"))` dropped (dependency direction here is server→modules, not the
@@ -1171,7 +1171,7 @@ the container's headroom was thin even before today's `worldedit-core` addition.
   kept reporting the stale `oom_disabled: true` afterward — a real Panel-API display quirk, not a
   live-config problem, not worth chasing further). Startup command:
   `DEBUG=true java -Xms1G -XX:MaxRAMPercentage=80.0 -Dminestom.dispatcher-threads=4 -jar {{SERVER_JARFILE}}`
-  (was `-Xms128M -XX:MaxRAMPercentage=95.0`) — also updated in `server/morellia-egg.json` so a
+  (was `-Xms128M -XX:MaxRAMPercentage=95.0`) — also updated in `server/nodisium-egg.json` so a
   future egg re-import carries it forward, matching the same convention as the dispatcher-threads
   bump.
 - **`dispatcher-threads` deliberately left at 4, not dropped to 3**: this VM is genuinely
@@ -1186,7 +1186,7 @@ the container's headroom was thin even before today's `worldedit-core` addition.
   Minestom RAM-per-player figure exists anywhere to shortcut that. Today's VM (4 vCPU/23GB total)
   already exceeds that target on paper; the real number still needs the `rust-mc-bot` load-test
   ladder (50→100→150 bots, watching `docker stats` memory% and `TickMonitor` tick times per the
-  existing `morellia-ops` playbook step 6) that this session didn't get to — worth running before
+  existing `nodisium-ops` playbook step 6) that this session didn't get to — worth running before
   trusting the new limits at real scale, and worth writing the actual measured result back into
   `RESEARCH.md` §7 once it exists instead of leaving it as a research-only estimate.
 
@@ -1270,7 +1270,7 @@ Current pipeline (all scratchpad tooling, not committed):
    before.
 
 Deployed via the usual stop→swap→start sequence (see gotchas below); pre-deploy `.bak` copies exist
-both on the Pterodactyl volume (see `.claude/skills/morellia-ops/SKILL.md`, gitignored) and in
+both on the Pterodactyl volume (see `.claude/skills/nodisium-ops/SKILL.md`, gitignored) and in
 `/opt/nodes-map/nodes/` as
 `{world,towns}.json.pre-compact-real-borders.bak`, alongside the original
 `{world,towns}.json.pre-agadir-borders-backup` from the very first (flat-world) territory rollout.
@@ -1288,7 +1288,7 @@ ally/enemy/neutral between equal `Nation`s.
 ## nodes-map: live territory viewer (historical — describes the production VM only, untouched but not part of current local-only work; see status update above)
 
 `DCFiendish/nodes-map` (fork of `Aechronis/nodes-map`) is built and deployed to the production VM
-(address in `.claude/skills/morellia-ops/SKILL.md`, gitignored) on port 8888, served via a systemd
+(address in `.claude/skills/nodisium-ops/SKILL.md`, gitignored) on port 8888, served via a systemd
 unit (`nodes-map.service`, `python3 -m http.server 8888` from `/opt/nodes-map`). `js/app.js`'s
 `PAN_BOUNDS` was updated to the real trimmed-box extent.
 Firewalled open at both the Oracle NSG layer and the VM's own iptables (`netfilter-persistent`
@@ -1299,7 +1299,7 @@ tile pyramid — not built, flagged as a future nice-to-have, not requested).
 ## Access / credentials (unchanged from before)
 
 - **SSH to the Oracle box**: connection details (host, key path) are in
-  `.claude/skills/morellia-ops/SKILL.md` (gitignored, not in this public repo).
+  `.claude/skills/nodisium-ops/SKILL.md` (gitignored, not in this public repo).
 - **This is the user's own Oracle VM** (personal hosting), shared by multiple of the user's own
   other projects, plus at least one other tenant's service the user has hosted as a favor (not part
   of this project, never modified — only ever viewed read-only to identify what was already running
@@ -1325,14 +1325,14 @@ tile pyramid — not built, flagged as a future nice-to-have, not requested).
 ## Server identifiers
 
 Pterodactyl server UUID, volume path, and container ownership details are in
-`.claude/skills/morellia-ops/SKILL.md` (gitignored, not in this public repo) — not repeated here.
+`.claude/skills/nodisium-ops/SKILL.md` (gitignored, not in this public repo) — not repeated here.
 
 - Docker container ID changes across restarts — always re-fetch via `sudo docker ps`, never reuse
   one from a prior session; verify by volume UUID, not by assuming the first `docker ps` row is
   Nodisium (this box runs multiple containers)
 - Port: 25567 (tcp + udp), offline-mode auth (`Auth.Offline()`)
 
-## Gotchas worth remembering (also in `.claude/skills/morellia-ops/SKILL.md`)
+## Gotchas worth remembering (also in `.claude/skills/nodisium-ops/SKILL.md`)
 
 - **Never `docker restart` right after hand-editing `nodes`' own JSON save files**
   (`world.json`/`towns.json`/`war.json`) — the old process's shutdown hook silently re-saves its
@@ -1358,11 +1358,207 @@ Pterodactyl server UUID, volume path, and container ownership details are in
   same change by hand in the Panel UI with Claude supplying the exact field values, then Claude
   verifies afterward via `GET`/`docker inspect`.
 
+## Status update (2026-09-06): local dev run without deploying — CLI works, IntelliJ run button doesn't yet
+
+User wants to run/test the server locally themselves (not just via the existing Claude-driven CLI
+boots) and asked specifically about IntelliJ. Project was not yet opened in IntelliJ at session
+start.
+
+- **No server jar is committed anywhere.** The server always runs from source — either
+  `./gradlew :server:run` (or `.bat` on Windows) or a built `shadowJar`
+  (`./gradlew :server:shadowJar` → `server/build/libs/nodisium-server.jar`). Entry point is
+  [`Main.kt`](../server/src/main/kotlin/net/nodisium/server/Main.kt) (`net.nodisium.server.MainKt`),
+  binds `localhost:25567` offline-mode, same target the `nodisium-testclient` dev client already
+  hits.
+- **CLI run confirmed working end-to-end this session**: `./gradlew.bat :server:run` from repo
+  root booted clean — Minestom started, LuckPerms/Vanilla/Nodes/WorldEdit/Combat/Spark all
+  initialized, "Nodisium test server ready — port 25567, offline mode" logged, ticking a steady
+  ~20 TPS. Confirms the root `build.gradle.kts`'s JDK 25 toolchain pin and the existing
+  `~/.gradle/gradle.properties` GitHub Packages creds (`gpr.user`/`gpr.token`, already populated
+  from an earlier session) are both sufficient for a totally clean local boot with no extra setup.
+- **IntelliJ run is NOT yet working, root cause identified but not confirmed fixed.** Opened the
+  repo root in IntelliJ (has `settings.gradle.kts`), let it Gradle-sync, then used the green ▶
+  gutter icon on `Main.kt`'s `fun main()`. Result: `LinkageError occurred while loading main class
+  net.nodisium.server.MainKt`.
+  - **Diagnosis**: that gutter icon always creates an IDE-native "Kotlin Application" run
+    configuration, which builds its own classpath via IntelliJ's JPS compiler/builder — a
+    different code path from Gradle's own dependency resolution, and known to diverge on
+    multi-module Kotlin projects with a build this size (5 subprojects, several GitHub
+    Packages/JitPack/EngineHub-hosted deps). Since the CLI Gradle run boots clean, the break is
+    specifically in IntelliJ's own classpath assembly, not the code or dependencies themselves.
+  - **Tried**: Settings → Build, Execution, Deployment → Build Tools → Gradle → "Build and run
+    using" / "Run tests using" switched from IntelliJ IDEA to Gradle. This did **not** fix the
+    gutter-arrow run — that setting only changes what *Build* does, not what an existing
+    "Kotlin Application" type run configuration does; the gutter arrow's generated config still
+    runs via IntelliJ's own launcher regardless of this setting. Confirmed by the user still
+    hitting the identical `LinkageError` after changing it.
+  - **Not yet tried / genuinely next step**: running the actual Gradle `application` task from
+    inside IntelliJ instead of the gutter arrow — Gradle tool window → `nodisium → server → Tasks →
+    application → run` (double-click). This executes the identical task that already works from
+    the CLI, so it should sidestep the JPS classpath issue entirely. **Unconfirmed whether the user
+    has actually tried this yet** — session ended with this as the suggested next action, no
+    screenshot/confirmation of it working. Check this first before re-diagnosing from scratch.
+  - If the Gradle-task route also fails, get the **full expanded stack trace** (click the triangle
+    on the error row in IntelliJ's Build/Run panel) — a bare `LinkageError` with no cause chain
+    isn't enough to pin down which specific class/module is conflicting.
+
+## Status update (2026-09-06, continued): Agadir map real bugs found and fixed, real biome zoning added, custom-terrain export bug still open
+
+Direct continuation of the WorldPainter pipeline work summarized in the 2026-08-29/30 entries
+above. Full details, exact commands/thresholds, and the current prioritized open-items list live
+in **`tools/agadir-mapgen/README.md`** (rewritten this session — read that, not this summary, for
+anything you actually need to act on).
+
+- **`agadir-import-v2.js` finally run and verified** (was "written but not run" since 2026-08-29).
+  Found and fixed four real, concrete bugs along the way, not just tuning: (1) sea-level
+  misalignment flooding most of France/UK/lowland Europe; (2) a single linear vertical
+  exaggeration factor turning real mountain ridges into needle spikes (fixed with a gamma-curved
+  second heightmap + a downsample/reconstruct peak-consolidation pass, NOT more Gaussian
+  blur — hand-smoothing in the GUI was tried first and produces round blobs instead of
+  mountains, see README); (3) almost every terrain material number in the script was the wrong
+  `Terrain` enum ordinal (highland was rendering as Sandstone, "dirt patches" were actually
+  painting sand) — ground-truth ordinal table now in the README; (4) `MissingCustomTerrainException`
+  from this WorldPainter install's default subsurface-material preference pointing at an
+  unconfigured custom terrain slot, fixed via direct Java interop instead of GUI preference state.
+- **Real per-biome tree layers wired in**, not just the built-in procedural Deciduous/Pine placeholder
+  from before — `treeforge-oak`/`aTaiga`/`aPalm Trees`/`aSwamp Generic` (all previously built but
+  unused) plus two new conversions from
+  [sijmenvb/worldpainter-trees](https://github.com/sijmenvb/worldpainter-trees) (MIT), now mapped
+  to real zones (temperate/highland/semi-arid/wet/alpine-treeline).
+- **Latitude-only biome zoning replaced with real WorldClim annual-precipitation data** (the
+  open item from 2026-08-29 — "can't distinguish Morocco from Southern Spain"). Deliberately
+  NOT country-boundary data — user correctly flagged that biomes follow climate, not political
+  borders, so a country-polygon mask would put a hard wrong edge where real vegetation should
+  transition smoothly. Now: <300mm arid (Morocco), 300-550mm semi-arid (interior Spain/Med),
+  550-900mm temperate (France/Germany), >900mm wet/oceanic (Britain/Ireland).
+- **Not resolved, real open bug**: tried building a wool-colored debug visualization of the new
+  biome zones (so zone boundaries would be easy to see before hand-designing custom brushes per
+  zone — the actual next task the user wants). `Terrain.setCustomMaterial()` +
+  `Terrain.isCustomMaterialConfigured()` report success at the Java level, but the block that
+  actually gets exported is wrong every time (verified directly via `anvil-parser2`, not just
+  WorldPainter's GUI overview, which uses its own non-representative fallback color for custom
+  terrain). Root cause not found — see README's Status section for the `MixedMaterialManager`
+  lead to try next. Pragmatic path taken instead: use the real native-terrain export (already
+  correct) plus WorldPainter's own "select by terrain type" tool to see zone boundaries, skip
+  custom-terrain entirely.
+- **User says this is not satisfactory yet** — continuing in a different session. Real remaining
+  gaps, in the order the user cares about: (1) design actual custom brushes/material treatment
+  per biome zone — not started; (2) real Mediterranean sclerophyll species (cork oak/olive) —
+  two Planet Minecraft packs investigated and rejected (obsolete format+texture-pack dependency
+  on one, no ready schematics on the other); (3) real Atlantic moorland/heath groundcover — not a
+  tree-schematic problem, needs a terrain-texture pass; (4) rivers — still zero hydrology data
+  sourced; (5) border/territory painting — still fully separate, unstarted.
+
+## Status update (2026-09-07): hot-swappable module system — `server` no longer compiles `nodes`/`vanilla`/`combat`/`worldedit` in directly
+
+Real architecture change, landed as two commits (`9c06c087`, `fec8757a`). Motivation: rebuilding and
+redeploying any one of the four modules used to mean rebuilding + restarting the whole server (and
+disconnecting every player) even for a one-line change in, say, `combat`. Now a single module can be
+rebuilt and reloaded live via `/modules reload <id>` with no restart and no disconnect.
+
+- **`server` has zero compile dependency on any of the four modules now.** `ModuleManager`
+  (`server/src/main/kotlin/net/nodisium/server/modules/ModuleManager.kt`) loads each from its own
+  jar under `nodisium-data/modules/<id>.jar` through its own `ModuleClassLoader` (parent-first
+  delegation — Minestom/Kotlin-stdlib/shared libs resolve from the parent, but the module's own
+  classes come from its own jar, so a rebuilt jar actually takes effect instead of a stale
+  core-compiled copy always winning).
+- **`nodes` depends on `vanilla` and `combat` at the module-graph level** — reloading either
+  `vanilla` or `combat` automatically cascades to reload `nodes` too, so `nodes`' classloader can
+  never end up pointing at an orphaned generation of a module it depends on.
+- **Each module needed real init/shutdown symmetry it mostly didn't have before this**:
+  - `nodes`' `cleanup()` now mirrors `initialize()` — unregisters its 15 commands, detaches its 4
+    event nodes, staged + idempotent (a retried shutdown can't double-run or skip a step).
+  - `vanilla` gained real `stop()` functions for 9 managers that previously ran untracked background
+    tasks (would have kept ticking against a torn-down instance after a reload otherwise).
+  - `combat` gained a `shutdown()` it never had at all.
+  - `worldedit` already had one (from its original port).
+  - Each module exposes this through a small `*LiveModule` wrapper (`NodesLiveModule.kt`,
+    `VanillaLiveModule.kt`, `CombatLiveModule.kt`, `WorldEditLiveModule.kt`) implementing
+    `HotSwappableModule` (`initialize(ModuleContext)` / `prepareForShutdown()` / `shutdown()`) —
+    `HotSwappableModule` itself lives on the core classloader so old and new generations of a module
+    (each on their own `ModuleClassLoader`) can be driven through the same contract across a reload.
+    `ModuleContext` is deliberately minimal (`spawnPoint`, `instance`) — "grow only when something
+    real needs it" per its own kdoc.
+- **Test/dev-only code that reaches into concrete `nodes`/`combat` types moved out of `server`**
+  (it couldn't stay — `server` no longer compiles against those modules at all): `TestWeapons.kt`,
+  `PvpKit.kt`/`KitCommand.kt`, `TestGunGive.kt`, `LoadTestBots.kt` all now live in
+  `modules/nodes/src/main/kotlin/net/aechronis/nodes/testing/`.
+- **`ModuleManager` itself**: a single lock serializes load/reload/shutdownAll so concurrent reloads
+  can't race and orphan a classloader; `reload()` reports the actual module that failed in a cascade
+  (not always the one originally requested); `load()` refuses a second call instead of silently
+  leaking the first boot's generations.
+- **`/modules list|reload <id>`** (`ModulesCommand.kt`) is registered once at boot in `Main.kt`, on
+  the core classloader — not inside any of the four modules — so it keeps working even if the module
+  currently being reloaded fails to come back up. Gated behind `nodisium.modules` permission.
+- **New `server:test` source set** — `ModuleManagerTest` boots all four modules against real jars,
+  reloads each (including both dependency cascades) several times in a row, and drives a real
+  graceful `MinecraftServer.stopCleanly()` through the actual shutdown-task hook `Main.kt` registers
+  (not just a direct `shutdownAll()` call), to confirm the hook itself is wired correctly.
+- **Verified against a real local boot, not just tests**: all four modules load in order, existing
+  town/nation save data reads back correctly, server ticks cleanly. **Not yet deployed to the real
+  Oracle VM.**
+- **Follow-up fix same day (`fec8757a`)**: `ModuleManager.loadOneModule()` was leaving the
+  `ModuleClassLoader` open if instantiation or `initialize()` threw — locked the module jar on
+  Windows, blocking a rebuild-and-retry of `/modules reload`. Now closed on failure. Also gave
+  `LoadTestBots` its own event node + `stop()` (same convention as `PvpKit`) — it was registering its
+  `PlayerSpawnEvent` listener directly on the global event handler with no teardown at all, unlike
+  every other manager touched by this refactor, so re-enabling it later would have duplicated
+  listeners across reloads.
+- **Docs note**: earlier entries in this file (the nodes/vanilla port, the monorepo migration, the
+  from-scratch `combat` build) describe modules as `project(...)` Gradle dependencies compiled
+  directly into `server` — that description is now **superseded** by everything above. Deploy
+  playbooks (`nodisium-ops`) built around "swap the whole server jar" should be revisited against
+  the new "swap one module jar + `/modules reload`" path before the next real VM deploy.
+
+## Status update (2026-09-07/08): `net.aechronis:utils` audited, 3 extra classes vendored (not a version bump)
+
+Prompted by the pre-launch checklist audit (`docs/LAUNCH_CHECKLIST.md`) flagging `modules/utils` as
+never fully reviewed. Checked what's actually in the pinned jar vs. current upstream, then vendored
+the gap in.
+
+- **The pinned jar (`net.aechronis:utils:86a747b`) has exactly 3 classes**: `Command` (the
+  permission-aware base command class everything already uses), `PermissionsKt`
+  (`Player.hasPermission`/`UUID.hasPermission` — the LuckPerms bridge), and `TestServerKt`
+  (`createTestServer()`, the real-`MinecraftServer` test harness `research-todo/08-testing-qa-and-legal.md`
+  already flagged as available-but-underused). Confirmed by listing the actual jar contents, not
+  just re-reading the old research doc.
+- **No newer version of `net.aechronis:utils` was ever published after `86a747b`.** Confirmed two
+  ways: `gh api orgs/Aechronis/repos` now lists only `Aechronis/aechronis` and `Aechronis/nodes-map`
+  as public — the old standalone `Aechronis/utils` repo this jar was published from is gone — and a
+  throwaway Gradle project probing `net.aechronis:utils:+` against that same GitHub Packages path
+  confirms no listable versions. Same fate as `Aechronis/combat` (§2026-08-26 above): the standalone
+  repo went stale/disappeared once development moved into the `Aechronis/aechronis` monorepo, and
+  nothing re-published from there.
+- **Current upstream monorepo (`modules/utils` in `Aechronis/aechronis`) has 3 more classes**:
+  `EntityTags.kt` (two `Tag<Boolean>` constants — `TRANSIENT_ENTITY`, `DAMAGEABLE_MANNEQUIN`),
+  `OreSounds.kt` (one `Sound` constant, a mining-ding reusing the XP-orb-pickup sound), and
+  `VisibilityRules.kt` (a real per-viewer tab-list/visibility rule engine — combinable predicates
+  keyed by an owner string, used for things like vanish/spectator-mode player hiding). A 4th class,
+  `UtilsModule.kt`, is upstream's own module-registration entry point for *their* hot-swap module
+  system (`net.aechronis.server.modules.AechronisModule`/`ModuleContext`) — **not portable as-is**,
+  and now doubly moot given Nodisium built its own independent hot-swap module system the same week
+  (see the status update directly above) with a different, incompatible interface shape.
+- **Fix, source-copy not a dependency bump** (same treatment `nodes`/`vanilla`/`worldedit` already
+  got when their upstream repos went stale): `EntityTags.kt`/`OreSounds.kt`/`VisibilityRules.kt`
+  copied verbatim (package `net.aechronis.utils`, matching the jar's own package so no import
+  changes are needed anywhere that later uses them) into
+  `server/src/main/kotlin/net/aechronis/utils/`, `UtilsModule.kt` deliberately dropped.
+  `:server:compileKotlin` confirmed clean — no class-name collision with the pinned jar's own 3
+  classes, since these are genuinely new names.
+- **Nothing calls any of the three vendored classes yet** — this pass only makes them available.
+  `VisibilityRules` in particular is worth wiring up the next time vanish/spectator-mode/admin-hide
+  comes up as a real feature, rather than rebuilding an equivalent from scratch.
+
 ## What's genuinely still open (not urgent, not touched recently)
+
+- **New, 2026-09-06**: confirm whether running the Gradle `application:run` task directly from
+  IntelliJ's Gradle tool window (not the `Main.kt` gutter arrow, which hits a `LinkageError` via
+  IntelliJ's own JPS builder) actually lets the user run/test the server themselves inside the IDE.
+  See the status update directly above for the full diagnosis and exact steps tried so far.
 
 - **New, 2026-09-02**: get a real per-player memory/CPU number instead of the research-only ~16GB/
   3-OCPU estimate in `RESEARCH.md` §7 — run the `rust-mc-bot` load-test ladder (50→100→150 bots per
-  the `morellia-ops` playbook step 6) against the newly-right-sized VM (18GB/20GB disk, see the
+  the `nodisium-ops` playbook step 6) against the newly-right-sized VM (18GB/20GB disk, see the
   2026-09-02 status update above) and write the measured result back into `RESEARCH.md` §7.
 - **New, 2026-09-02**: `warpsConfig.warps` and `pvpPrepConfig.zones` are both still empty in
   `Main.kt` — no `/warp` destinations and no no-damage safe-zone box exist on the Nodisium map yet,
@@ -1391,9 +1587,9 @@ Pterodactyl server UUID, volume path, and container ownership details are in
   findings are moot since they were vehicle/explosion-specific and vehicles aren't built yet). See
   `research-todo/01-concurrency-model.md` (resolved 2026-08-06) for the thread-safety model
   `modules/combat`'s `ConcurrentHashMap`-everywhere design was built against.
-- **Not yet committed**: all of `modules/combat` plus the `server/` changes that wire it in are
-  sitting uncommitted in the working tree as of 2026-08-26 — commit them once fire/reload/melee/ADS
-  have actually been played through by a human (see the status update above).
+- ~~**Not yet committed**: all of `modules/combat` plus the `server/` changes that wire it in are
+  sitting uncommitted in the working tree as of 2026-08-26~~ — long since committed (predates the
+  2026-09-07 hot-swap module refactor, which touched `combat` again anyway).
 - Alliance/enemy relationships between the 10 nations (currently all neutral) — moot until the
   terrain/border replan lands real nation territory again.
 - **New, 2026-08-25**: real terrain needs replanning from scratch (both prior attempts abandoned —
