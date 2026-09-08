@@ -13,6 +13,7 @@ import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockTags
 import net.minestom.server.network.packet.server.play.BlockChangePacket
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.iterator
@@ -20,6 +21,7 @@ import kotlin.math.abs
 
 object Saplings {
     val saplings = ConcurrentHashMap<BlockKey, SaplingsPlanted>()
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
@@ -27,7 +29,7 @@ object Saplings {
         registerPlacementRules()
         SaplingsListener.init()
 
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::growthTick)
             .repeat(TaskSchedule.seconds(Vanilla.config.saplingGrowthCheckSeconds))
@@ -35,6 +37,11 @@ object Saplings {
 
         val timeEnd = System.currentTimeMillis()
         println("├─ Saplings enabled in ${timeEnd - timeStart}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     internal fun registerPlacementRules() {

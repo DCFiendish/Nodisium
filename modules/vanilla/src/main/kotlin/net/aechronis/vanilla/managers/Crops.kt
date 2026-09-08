@@ -8,6 +8,7 @@ import net.aechronis.vanilla.objects.CropsPlantedCrop
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.network.packet.server.play.BlockChangePacket
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.iterator
@@ -15,6 +16,7 @@ import kotlin.collections.iterator
 object Crops {
     val crops = ConcurrentHashMap<BlockKey, CropsPlantedCrop>()
     val msPerState = mutableMapOf<CropType, Long>()
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
@@ -24,7 +26,7 @@ object Crops {
 
         CropsPlantListener.init()
 
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::growthTick)
             .repeat(TaskSchedule.seconds(Vanilla.config.cropGrowthCheckSeconds))
@@ -32,6 +34,11 @@ object Crops {
         val timeEnd = System.currentTimeMillis()
         val timeLoad = timeEnd - timeStart
         println("├─ Crops enabled in ${timeLoad}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     private fun growthTick() {

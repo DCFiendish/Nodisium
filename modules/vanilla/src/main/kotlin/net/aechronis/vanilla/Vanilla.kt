@@ -54,8 +54,10 @@ import net.aechronis.vanilla.managers.TreeFeller
 import net.aechronis.vanilla.managers.VoteLinks
 import net.aechronis.vanilla.managers.Warp
 import net.minestom.server.MinecraftServer
+import net.minestom.server.command.builder.Command
 import net.minestom.server.event.EventNode
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 import net.aechronis.vanilla.managers.Music as MusicManager
 import net.aechronis.vanilla.managers.Vanish as VanishManager
 import net.aechronis.vanilla.managers.Whitelist as WhitelistManager
@@ -65,7 +67,11 @@ object Vanilla {
     lateinit var config: VanillaConfig
         private set
 
+    private val initialized = AtomicBoolean(false)
+    private var registeredCommands: kotlin.collections.List<Command> = emptyList()
+
     fun init(c: VanillaConfig = VanillaConfig()) {
+        check(initialized.compareAndSet(false, true)) { "Vanilla is already initialized -- call shutdown() first" }
         config = c
         // measure load time
         val timeStart = System.currentTimeMillis()
@@ -99,6 +105,7 @@ object Vanilla {
             if (config.warpEnabled) commands += listOf(WarpCommand(), SetWarpCommand())
             if (config.vanishEnabled) commands += Vanish()
             if (config.voteEnabled) commands += Vote()
+            registeredCommands = commands
             MinecraftServer.getCommandManager().register(*commands.toTypedArray())
         }
         println("Loading Vanilla")
@@ -137,18 +144,39 @@ object Vanilla {
         if (config.vanishEnabled) VanishManager.init()
         if (config.voteEnabled) VoteLinks.init(Path.of(config.path, config.votePath))
 
-        Runtime.getRuntime().addShutdownHook(
-            Thread({
-                println("Vanilla: saving data before shutdown...")
-                if (config.playerDataEnabled) PlayerData.saveAll()
-                if (config.storageEnabled) Storage.saveAll()
-                println("Vanilla: data saved.")
-            }, "vanilla-shutdown-save"),
-        )
-
         // print load time
         val timeEnd = System.currentTimeMillis()
         val timeLoad = timeEnd - timeStart
         println("└─ Vanilla Loaded in ${timeLoad}ms")
+    }
+
+    /**
+     * Symmetric inverse of [init] -- unregisters commands, detaches [eventNode] (which covers
+     * every manager that only ever added listeners to it), stops every manager that runs its own
+     * background [net.minestom.server.timer.Task] (those aren't cancelled by detaching eventNode),
+     * and does each manager's final save. Safe to call even if a given subsystem was never enabled
+     * (each stop() is idempotent on an unstarted manager -- cancelling a null task is a no-op).
+     */
+    fun shutdown() {
+        if (!initialized.compareAndSet(true, false)) return
+        println("Vanilla: shutting down...")
+
+        registeredCommands.forEach(MinecraftServer.getCommandManager()::unregister)
+        registeredCommands = emptyList()
+        MinecraftServer.getGlobalEventHandler().removeChild(eventNode)
+
+        // Every manager below runs its own Task outside of eventNode's listener tree, so
+        // detaching eventNode alone would leave these running against torn-down state.
+        Koth.stop()
+        Combat.stop()
+        Saplings.stop()
+        Crops.stop()
+        Food.stop()
+        EnvironmentalDamage.stop()
+        Storage.stop()
+        PlayerData.stop()
+        Warp.stop()
+
+        println("Vanilla: data saved.")
     }
 }

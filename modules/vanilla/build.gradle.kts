@@ -10,6 +10,8 @@ dependencies {
     implementation("com.modernmt.text:profanity-filter:1.0.1")
     compileOnly("org.everbuild.blocksandstuff:blocksandstuff-blocks:1.10.2-SNAPSHOT")
     compileOnly("org.everbuild.blocksandstuff:blocksandstuff-common:1.10.2-SNAPSHOT")
+    // Interface types only (HotSwappableModule/ModuleContext, see VanillaLiveModule.kt).
+    compileOnly(project(":server"))
 
     // testing
     testImplementation("com.google.code.gson:gson:2.14.0")

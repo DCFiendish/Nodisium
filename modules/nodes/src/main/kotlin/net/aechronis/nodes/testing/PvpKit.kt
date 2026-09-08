@@ -1,4 +1,4 @@
-package net.nodisium.server
+package net.aechronis.nodes.testing
 
 import net.aechronis.utils.Command
 import net.minestom.server.MinecraftServer
@@ -22,6 +22,11 @@ import net.minestom.server.item.Material
  * pre-PvpKit test session that saved a full weapon-arsenal inventory) would have that stale
  * inventory silently clobber the clean kit on join. Confirmed as a real bug, not theoretical --
  * an existing playtester's leftover DevLoadout-era .dat reappeared on join before this fix.
+ *
+ * Moved here from server/src/main/kotlin/net/nodisium/server/PvpKit.kt alongside [TestWeapons]
+ * when nodes became an independently hot-swappable module (see ModuleManager) -- registers
+ * directly on the global event handler (not Nodes.eventNode), so [stop] detaches it explicitly
+ * rather than relying on Nodes.cleanup()'s eventNode teardown to catch it.
  */
 object PvpKit {
     private val eventNode = EventNode.all("pvp-kit").setPriority(999)
@@ -53,6 +58,10 @@ object PvpKit {
             giveKit(player)
         }
         MinecraftServer.getGlobalEventHandler().addChild(eventNode)
+    }
+
+    fun stop() {
+        MinecraftServer.getGlobalEventHandler().removeChild(eventNode)
     }
 }
 

@@ -1,4 +1,4 @@
-package net.nodisium.server
+package net.aechronis.nodes.testing
 
 import net.aechronis.utils.Command
 import net.kyori.adventure.text.Component
@@ -19,6 +19,10 @@ import net.minestom.server.item.component.CustomModelData
  *
  * "kar98k" is special-cased below to hand the real, fully-loaded [TestWeapons.kar98k] Gun instead
  * of the bare placeholder stack -- the only one of these eight wired into real combat stats so far.
+ *
+ * Moved here from server/src/main/kotlin/net/nodisium/server/TestGunGive.kt alongside
+ * [TestWeapons] when nodes became an independently hot-swappable module (see ModuleManager) --
+ * server no longer has a compile dependency on nodes or combat.
  */
 class TestGunGive : Command("testgun", "nodisium.testgun") {
     companion object {

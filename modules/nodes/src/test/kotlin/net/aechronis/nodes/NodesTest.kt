@@ -769,6 +769,11 @@ class NodesTest {
         if (System.getProperty("keepRunning") == "true") {
             Thread.currentThread().join()
         }
+        // Nodes.initialize() no longer self-registers a shutdown task (that's now the caller's
+        // job -- see NodesLiveModule.shutdown() for the live-server equivalent of this call), so
+        // this test has to stop SaveManager/etc. and flush its own final save explicitly, or a
+        // periodic save can still be mid-write against tmpDir when the deleteIfExists below runs.
+        Nodes.cleanup()
         if (serverInitialized) MinecraftServer.stopCleanly()
         if (::tmpDir.isInitialized) {
             Files.walk(tmpDir).use { paths ->

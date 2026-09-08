@@ -1,4 +1,4 @@
-package net.nodisium.server
+package net.aechronis.nodes.testing
 
 import net.aechronis.nodes.objects.Nation
 import net.aechronis.nodes.objects.Resident
@@ -41,7 +41,9 @@ import net.minestom.server.item.Material
  * error anywhere) -- confirmed by watching towns.json's "captured" list stay empty across a real
  * local bot-swarm run against this code before this fix was added, then non-empty after.
  *
- * Remove all of this once real players replace load-test bots.
+ * Remove all of this once real players replace load-test bots. Moved here from
+ * server/src/main/kotlin/net/nodisium/server/LoadTestBots.kt when nodes became an independently
+ * hot-swappable module (see ModuleManager) -- server no longer has a compile dependency on it.
  */
 object LoadTestBots {
     private val botNameRegex = Regex("""^Bot_(\d+)$""")

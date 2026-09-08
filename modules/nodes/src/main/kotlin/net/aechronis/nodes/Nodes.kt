@@ -58,6 +58,7 @@ import net.aechronis.nodes.utils.loadLongFromFile
 import net.aechronis.nodes.war.FlagWar
 import net.aechronis.nodes.war.Warzone
 import net.minestom.server.MinecraftServer
+import net.minestom.server.command.builder.Command
 import net.minestom.server.entity.Player
 import net.minestom.server.event.EventNode
 import net.minestom.server.item.Material
@@ -68,6 +69,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.measureNanoTime
 
 /** Global lifecycle, persistence, registries, and cross-domain engine coordination. */
@@ -145,7 +147,16 @@ object Nodes {
     internal val hiddenOreInvalidBlocks: OreBlockCache = OreBlockCache()
     lateinit var config: NodesConfig
 
+    // Guards against double-initialize/double-cleanup in the same JVM (e.g. a module hot-reload
+    // calling initialize() again) -- without this, a second initialize() would register a second
+    // copy of every listener/command on top of the first instead of replacing it.
+    private val initialized = AtomicBoolean(false)
+    private var commands: List<Command> = emptyList()
+    private val completedCleanupStages = HashSet<CleanupStage>()
+
     fun initialize(config: NodesConfig = NodesConfig()) {
+        check(initialized.compareAndSet(false, true)) { "Nodes is already initialized -- call cleanup() first" }
+        completedCleanupStages.clear()
         val timeStart = System.currentTimeMillis()
         this.config = config
         FlagWar.initialize(config.flagBlocks)
@@ -181,21 +192,23 @@ object Nodes {
         NodesWorldListener.init()
         NodesVanillaStorageBridge.init()
         WaypointMenu.init()
-        MinecraftServer.getSchedulerManager().buildShutdownTask { cleanup() }
-        MinecraftServer.getCommandManager().register(TownCommand())
-        MinecraftServer.getCommandManager().register(NationCommand())
-        MinecraftServer.getCommandManager().register(NodesAdminCommand())
-        MinecraftServer.getCommandManager().register(AllyCommand())
-        MinecraftServer.getCommandManager().register(UnallyCommand())
-        MinecraftServer.getCommandManager().register(GlobalChatCommand())
-        MinecraftServer.getCommandManager().register(TownChatCommand())
-        MinecraftServer.getCommandManager().register(NationChatCommand())
-        MinecraftServer.getCommandManager().register(AllyChatCommand())
-        MinecraftServer.getCommandManager().register(PlayerCommand())
-        MinecraftServer.getCommandManager().register(TerritoryCommand())
-        MinecraftServer.getCommandManager().register(PortCommand())
-        MinecraftServer.getCommandManager().register(WaypointCommand())
-        MinecraftServer.getCommandManager().register(WarzoneCommand())
+        commands = listOf(
+            TownCommand(),
+            NationCommand(),
+            NodesAdminCommand(),
+            AllyCommand(),
+            UnallyCommand(),
+            GlobalChatCommand(),
+            TownChatCommand(),
+            NationChatCommand(),
+            AllyChatCommand(),
+            PlayerCommand(),
+            TerritoryCommand(),
+            PortCommand(),
+            WaypointCommand(),
+            WarzoneCommand(),
+        )
+        commands.forEach(MinecraftServer.getCommandManager()::register)
         lastBackupTime = loadLongFromFile(config.pathLastBackupTime) ?: System.currentTimeMillis()
         reloadManagers()
         MiningBoostManager.start()
@@ -234,13 +247,63 @@ object Nodes {
         FlagWar.enable(canAnnexTerritories, canOnlyAttackBorders, destructionEnabled)
     }
 
+    /**
+     * Symmetric inverse of [initialize] -- unregisters every command/event node this module
+     * registered, stops every scheduled manager, and does a final synchronous save. Staged and
+     * idempotent (each [CleanupStage] runs at most once) so a hot-reload that calls this can
+     * safely retry, and so double-cleanup in the same JVM is a no-op rather than a double-save or
+     * a crash from unregistering something already unregistered.
+     */
     internal fun cleanup() {
-        MiningBoostManager.stop()
-        residents.values.forEach { it.destroyMinimap() }
-        towns.values.forEach { town -> if (town.income.pushToStorage(true)) town.needsUpdate() }
-        if (FlagWar.enabled) FlagWar.cleanup()
-        Warzone.cleanup()
-        saveWorld(checkIfNeedsSave = false, async = false)
+        if (!initialized.get()) return
+
+        val globalEventHandler = MinecraftServer.getGlobalEventHandler()
+        cleanupStage(CleanupStage.EVENTS) {
+            listOf(lowPriorityEventNode, eventNode, highPriorityEventNode, postPermissionEventNode).forEach { node ->
+                globalEventHandler.removeChild(node)
+            }
+        }
+        cleanupStage(CleanupStage.COMMANDS) {
+            commands.forEach(MinecraftServer.getCommandManager()::unregister)
+            commands = emptyList()
+        }
+        cleanupStage(CleanupStage.MANAGERS) {
+            SaveManager.stop()
+            IncomeManager.stop()
+            Nametag.stop()
+            MiningBoostManager.stop()
+        }
+        cleanupStage(CleanupStage.RESIDENTS) {
+            residents.values.forEach { it.destroyMinimap() }
+        }
+        cleanupStage(CleanupStage.TOWNS) {
+            towns.values.forEach { town -> if (town.income.pushToStorage(true)) town.needsUpdate() }
+        }
+        cleanupStage(CleanupStage.FLAG_WAR) {
+            if (FlagWar.enabled) FlagWar.cleanup()
+        }
+        cleanupStage(CleanupStage.WARZONE, Warzone::cleanup)
+        cleanupStage(CleanupStage.FINAL_SAVE) {
+            saveWorld(checkIfNeedsSave = false, async = false)
+        }
+        initialized.set(false)
+    }
+
+    private fun cleanupStage(stage: CleanupStage, action: () -> Unit) {
+        if (stage in completedCleanupStages) return
+        action()
+        completedCleanupStages += stage
+    }
+
+    private enum class CleanupStage {
+        EVENTS,
+        COMMANDS,
+        MANAGERS,
+        RESIDENTS,
+        TOWNS,
+        FLAG_WAR,
+        WARZONE,
+        FINAL_SAVE,
     }
 
     internal fun loadResources(json: JsonObject) {

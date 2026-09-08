@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.Player
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -15,17 +16,23 @@ object Combat {
     // player uuid -> epoch millis when the combat tag expires
     private val expiresAt = ConcurrentHashMap<UUID, Long>()
     private val bossBars = ConcurrentHashMap<UUID, BossBar>()
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
         CombatListener.init()
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::tick)
             .repeat(TaskSchedule.seconds(Vanilla.config.combatTickSeconds))
             .schedule()
         val timeEnd = System.currentTimeMillis()
         println("├─ Combat enabled in ${timeEnd - timeStart}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     fun tag(

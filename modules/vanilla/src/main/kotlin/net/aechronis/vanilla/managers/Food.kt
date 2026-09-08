@@ -10,6 +10,7 @@ import net.minestom.server.entity.attribute.Attribute
 import net.minestom.server.entity.damage.DamageType
 import net.minestom.server.item.Material
 import net.minestom.server.registry.RegistryKey
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -18,6 +19,7 @@ object Food {
     val foodItems = mutableMapOf<Material, FoodItem>()
     private val exhaustion = ConcurrentHashMap<UUID, Float>()
     private val STARVE: RegistryKey<DamageType> = RegistryKey.unsafeOf("minecraft:starve")
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
@@ -26,13 +28,18 @@ object Food {
             foodItems[item.material] = item
         }
         FoodListener.init()
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::tick)
             .repeat(TaskSchedule.seconds(config.foodConfig.foodTickSeconds))
             .schedule()
         val timeEnd = System.currentTimeMillis()
         println("├─ Food enabled in ${timeEnd - timeStart}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     fun onEat(

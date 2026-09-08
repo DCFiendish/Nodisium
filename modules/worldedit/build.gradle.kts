@@ -13,6 +13,8 @@ dependencies {
     }
     compileOnly("com.google.guava:guava:33.6.0-jre")
     compileOnly("it.unimi.dsi:fastutil:8.5.18")
+    // Interface types only (HotSwappableModule/ModuleContext, see WorldEditLiveModule.kt).
+    compileOnly(project(":server"))
 
     testImplementation("net.aechronis:utils:86a747b")
     testImplementation("com.google.guava:guava:33.6.0-jre")

@@ -10,6 +10,7 @@ import net.minestom.server.event.player.PlayerDisconnectEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.potion.PotionEffect
 import net.minestom.server.registry.RegistryKey
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -19,10 +20,11 @@ object EnvironmentalDamage {
     private val IN_FIRE: RegistryKey<DamageType> = RegistryKey.unsafeOf("minecraft:in_fire")
     private val ON_FIRE: RegistryKey<DamageType> = RegistryKey.unsafeOf("minecraft:on_fire")
     private val DROWN: RegistryKey<DamageType> = RegistryKey.unsafeOf("minecraft:drown")
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::tick)
             .repeat(TaskSchedule.tick(1))
@@ -30,6 +32,11 @@ object EnvironmentalDamage {
         Vanilla.eventNode.addListener(PlayerDeathEvent::class.java, ::removePlayer)
         Vanilla.eventNode.addListener(PlayerDisconnectEvent::class.java, ::removePlayer)
         println("├─ Environmental damage enabled in ${System.currentTimeMillis() - timeStart}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     private fun tick() {

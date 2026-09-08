@@ -16,6 +16,7 @@ import net.nodisium.combat.objects.Melee
 import net.nodisium.combat.tasks.ActionBarManager
 import net.nodisium.combat.tasks.ModelRefreshTask
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Central per-player combat state. Every map here is a concurrent collection from the start --
@@ -47,7 +48,10 @@ object Combat {
     /** Same (which weapon, when) shape as [playerLastFireTimes], same reason -- see MeleeListener. */
     internal val meleeLastAttackTimes = ConcurrentHashMap<Player, Pair<Melee, Long>>()
 
+    private val initialized = AtomicBoolean(false)
+
     fun initialize() {
+        check(initialized.compareAndSet(false, true)) { "Combat is already initialized -- call shutdown() first" }
         MinecraftServer.getGlobalEventHandler().addChild(eventNode)
 
         FireListener.init()
@@ -59,6 +63,26 @@ object Combat {
         PlayerDisconnectListener.init()
         ActionBarManager.start()
         ModelRefreshTask.start()
+    }
+
+    /** Symmetric inverse of [initialize] -- detaches [eventNode], stops both scheduled tasks, and
+     * cancels every outstanding per-player task before clearing all per-player state. */
+    fun shutdown() {
+        if (!initialized.compareAndSet(true, false)) return
+        MinecraftServer.getGlobalEventHandler().removeChild(eventNode)
+        ActionBarManager.stop()
+        ModelRefreshTask.stop()
+        autoFireTasks.values.forEach(Task::cancel)
+        reloadTasks.values.forEach(Task::cancel)
+        playerLastFireTimes.clear()
+        lastFireInputTimes.clear()
+        autoFireTasks.clear()
+        reloadTasks.clear()
+        reloadProgress.clear()
+        aimingPlayers.clear()
+        movingPlayers.clear()
+        sprintingPlayers.clear()
+        meleeLastAttackTimes.clear()
     }
 
     /**

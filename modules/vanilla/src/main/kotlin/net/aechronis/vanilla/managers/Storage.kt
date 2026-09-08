@@ -17,6 +17,7 @@ import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockHandler
 import net.minestom.server.inventory.Inventory
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,6 +40,7 @@ object Storage {
             override fun getKey(): Key = barrelKey
         }
     private var legacyRoot: Path? = null
+    private var task: Task? = null
 
     // Vanilla has no notion of claims/permissions on its own -- Nodes wires this up via
     // NodesVanillaStorageBridge so barrels respect town ownership. Without a checker installed,
@@ -67,7 +69,7 @@ object Storage {
 
         // Barrels already persist on inventory close, but that only covers barrels a player
         // actually opened and closed cleanly -- this is a periodic safety net for the rest.
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::saveAll)
             .repeat(TaskSchedule.seconds(300))
@@ -76,6 +78,12 @@ object Storage {
         val timeEnd = System.currentTimeMillis()
         val timeLoad = timeEnd - timeStart
         println("├─ Storage enabled in ${timeLoad}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
+        saveAll()
     }
 
     fun keyFor(

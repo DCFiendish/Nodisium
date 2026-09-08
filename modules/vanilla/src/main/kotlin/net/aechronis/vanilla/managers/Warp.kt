@@ -60,6 +60,12 @@ object Warp {
         WarpListener.init()
     }
 
+    fun stop() {
+        pending.values.forEach { it.task.cancel() }
+        pending.clear()
+        definitions.clear()
+    }
+
     private fun loadConfiguration() {
         val warps = Vanilla.config.warpsConfig.warps
         require(warps.map { it.name }.toSet().size == warps.size) { "Warp names must be unique" }

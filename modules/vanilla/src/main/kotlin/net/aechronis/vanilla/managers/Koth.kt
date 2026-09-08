@@ -15,6 +15,7 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -48,17 +49,23 @@ object Koth {
     private val cronParser = CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
 
     private const val ANNOUNCEMENT_INTERVAL_MS = 10 * 60 * 1000L
+    private var task: Task? = null
 
     fun init() {
         val timeStart = System.currentTimeMillis()
         loadConfiguration()
         KothListener.init()
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::scheduledTick)
             .repeat(TaskSchedule.seconds(1))
             .schedule()
         println("├─ KOTH enabled in ${System.currentTimeMillis() - timeStart}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 
     fun configuredNames(): Set<String> = definitions.keys

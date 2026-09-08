@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.Player
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import net.nodisium.combat.Combat
 import net.nodisium.combat.objects.Gun
@@ -24,9 +25,10 @@ object ActionBarManager {
     // fires, unlike e.g. AbstractInventory.setItemStack which no-ops on an unchanged value) on the
     // overwhelmingly common tick where the bar hasn't visibly changed.
     private val lastSent = mutableMapOf<Player, Component>()
+    private var task: Task? = null
 
     fun start() {
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask {
                 for (player in MinecraftServer.getConnectionManager().onlinePlayers) {
@@ -34,6 +36,12 @@ object ActionBarManager {
                 }
             }.repeat(TaskSchedule.tick(UPDATE_PERIOD_TICKS))
             .schedule()
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
+        lastSent.clear()
     }
 
     fun clearPlayer(player: Player) {

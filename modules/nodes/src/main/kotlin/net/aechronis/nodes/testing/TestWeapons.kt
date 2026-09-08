@@ -1,4 +1,4 @@
-package net.nodisium.server
+package net.aechronis.nodes.testing
 
 import net.aechronis.nodes.objects.Territory
 import net.aechronis.nodes.objects.TerritoryChunk
@@ -16,9 +16,16 @@ import net.nodisium.combat.objects.Melee
 
 /**
  * combat itself has no dependency on nodes (see modules/combat/build.gradle.kts) -- this predicate
- * lives here, in server, which already depends on both, and gets injected into Gun.usableZones.
- * Rule: field guns are only usable in wilderness (unclaimed land) or in a chunk currently under
- * active siege -- not inside a town's peacetime territory.
+ * lives here, in nodes (which already depends on both vanilla and combat -- see
+ * modules/nodes/build.gradle.kts), and gets injected into Gun.usableZones. Rule: field guns are
+ * only usable in wilderness (unclaimed land) or in a chunk currently under active siege -- not
+ * inside a town's peacetime territory.
+ *
+ * Moved here from server/src/main/kotlin/net/nodisium/server/TestWeapons.kt when nodes/vanilla/
+ * combat/worldedit became independently hot-swappable modules (see ModuleManager) -- server no
+ * longer has a compile dependency on any of them, so glue code needing concrete types from more
+ * than one module has to live inside whichever module is willing to depend on the others (nodes
+ * already aggregates cross-module concerns this way, e.g. NodesVanillaStorageBridge).
  */
 private val wildernessOrWarzoneOnly: (Instance, Pos) -> Boolean = { _, pos ->
     val territory = Territory.fromBlock(pos.blockX(), pos.blockZ())

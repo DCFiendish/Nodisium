@@ -5,9 +5,11 @@ import net.aechronis.vanilla.serdes.PlayerDataSerializer
 import net.kyori.adventure.nbt.BinaryTagIO
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.Player
+import net.minestom.server.event.Event
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.player.PlayerDisconnectEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,22 +21,28 @@ import java.util.concurrent.ConcurrentHashMap
 object PlayerData {
     private val tracked: MutableSet<Player> = ConcurrentHashMap.newKeySet<Player>()
     private lateinit var dataPath: Path
+    // Registered directly on the global handler, not as a child of Vanilla.eventNode -- so
+    // Vanilla.shutdown() removing Vanilla.eventNode alone would miss this one; stop() below
+    // detaches it explicitly.
+    private var node: EventNode<Event>? = null
+    private var task: Task? = null
 
     fun init(path: Path) {
         val timeStart = System.currentTimeMillis()
         Files.createDirectories(path)
         dataPath = path
 
-        val node = EventNode.all("vanilla-playerdata")
+        val eventNode = EventNode.all("vanilla-playerdata")
+        node = eventNode
 
-        node.addListener(PlayerSpawnEvent::class.java) { event ->
+        eventNode.addListener(PlayerSpawnEvent::class.java) { event ->
             Commands.allowEnderChest(event.player)
             tracked.add(event.player)
             if (!event.isFirstSpawn) return@addListener
             loadPlayer(event.player, path)
         }
 
-        node.addListener(PlayerDisconnectEvent::class.java) { event ->
+        eventNode.addListener(PlayerDisconnectEvent::class.java) { event ->
             tracked.remove(event.player)
             Commands.closeViewsOf(event.player)
             try {
@@ -44,11 +52,11 @@ object PlayerData {
             }
         }
 
-        MinecraftServer.getGlobalEventHandler().addChild(node)
+        MinecraftServer.getGlobalEventHandler().addChild(eventNode)
 
         // Previously only saved on disconnect/shutdown -- a crash or lost connection (not a clean
         // disconnect) meant every change since the last clean save was gone.
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask(::saveAll)
             .repeat(TaskSchedule.seconds(300))
@@ -57,6 +65,15 @@ object PlayerData {
         val timeEnd = System.currentTimeMillis()
         val timeLoad = timeEnd - timeStart
         println("├─ Playerdata enabled in ${timeLoad}ms")
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
+        node?.let(MinecraftServer.getGlobalEventHandler()::removeChild)
+        node = null
+        saveAll()
+        tracked.clear()
     }
 
     fun saveAll() {

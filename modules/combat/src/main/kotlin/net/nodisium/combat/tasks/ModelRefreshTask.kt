@@ -1,6 +1,7 @@
 package net.nodisium.combat.tasks
 
 import net.minestom.server.MinecraftServer
+import net.minestom.server.timer.Task
 import net.minestom.server.timer.TaskSchedule
 import net.nodisium.combat.objects.Gun
 import net.nodisium.combat.objects.Item
@@ -13,8 +14,10 @@ import net.nodisium.combat.objects.Item
  * `Aechronis/aechronis`'s own `ModelManager.start()` cadence (`TaskSchedule.tick(1)`).
  */
 object ModelRefreshTask {
+    private var task: Task? = null
+
     fun start() {
-        MinecraftServer
+        task = MinecraftServer
             .getSchedulerManager()
             .buildTask {
                 for (player in MinecraftServer.getConnectionManager().onlinePlayers) {
@@ -23,5 +26,10 @@ object ModelRefreshTask {
                 }
             }.repeat(TaskSchedule.tick(1))
             .schedule()
+    }
+
+    fun stop() {
+        task?.cancel()
+        task = null
     }
 }
