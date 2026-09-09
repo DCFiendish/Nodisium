@@ -109,6 +109,7 @@ class Town(
             if (leader?.town != null) return Result.failure(ErrorPlayerHasTown)
             val town = Town(UUID.randomUUID(), name, territory.id, leader, spawnpoint)
             territory.town = town
+            territory.reservedNation?.let { Nation.unreserveTerritory(territory) }
             if (leader != null) {
                 leader.town = town
                 clearPendingMembershipRequests(leader)
@@ -426,6 +427,7 @@ class Town(
             if (territory.town != null) return Result.failure(ErrorTerritoryOwned)
             town.territories.add(territory.id)
             territory.town = town
+            territory.reservedNation?.let { Nation.unreserveTerritory(territory) }
             town.needsUpdate()
             Nodes.needsSave = true
             Resident.renderMinimaps()

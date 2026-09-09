@@ -143,7 +143,11 @@ internal object MinimapMarkerRenderer {
         } else {
             territory.occupier ?: territory.town
         }
-        return representedTown?.let { relationshipToTown(viewer, it) }
+        if (representedTown != null) return relationshipToTown(viewer, representedTown)
+        // No real owner yet -- still show a nation's reserved-but-unclaimed territory with the
+        // same relationship tiers a town would get, so planned nation borders read on the map
+        // ahead of any town existing there.
+        return territory.reservedNation?.let { relationshipToNation(viewer, it) }
     }
 
     internal fun relationshipToTown(viewer: MinimapViewerSnapshot, town: Town): DiplomaticRelationship {
@@ -153,6 +157,15 @@ internal object MinimapMarkerRenderer {
             viewer.residentNation != null && townNation === viewer.residentNation -> DiplomaticRelationship.NATION
             townNation != null && townNation in viewer.alliedNations -> DiplomaticRelationship.ALLY
             townNation != null && townNation in viewer.enemyNations -> DiplomaticRelationship.ENEMY
+            else -> DiplomaticRelationship.NEUTRAL
+        }
+    }
+
+    internal fun relationshipToNation(viewer: MinimapViewerSnapshot, nation: Nation): DiplomaticRelationship {
+        return when {
+            viewer.residentNation != null && nation === viewer.residentNation -> DiplomaticRelationship.NATION
+            nation in viewer.alliedNations -> DiplomaticRelationship.ALLY
+            nation in viewer.enemyNations -> DiplomaticRelationship.ENEMY
             else -> DiplomaticRelationship.NEUTRAL
         }
     }

@@ -12,6 +12,7 @@ import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.constants.ErrorNationExists
 import net.aechronis.nodes.constants.ErrorPlayerHasNation
 import net.aechronis.nodes.constants.ErrorPlayerNotInTown
+import net.aechronis.nodes.constants.ErrorTerritoryOwned
 import net.aechronis.nodes.constants.ErrorTownHasNation
 import net.aechronis.nodes.serdes.SaveState
 import net.aechronis.nodes.utils.ChatColor
@@ -95,7 +96,14 @@ class Nation(
             return Result.success(nation)
         }
 
-        fun load(uuid: UUID, name: String, capitalName: String?, color: Color?, towns: ArrayList<String>): Nation {
+        fun load(
+            uuid: UUID,
+            name: String,
+            capitalName: String?,
+            color: Color?,
+            towns: ArrayList<String>,
+            reservedTerritoryIds: ArrayList<Int> = arrayListOf(),
+        ): Nation {
             val capital = if (capitalName != null) {
                 Town.fromName(capitalName) ?: throw net.aechronis.nodes.constants.ErrorTownDoesNotExist
             } else {
@@ -110,6 +118,15 @@ class Nation(
                 town.nation = nation
                 town.needsUpdate()
                 indexTownMembers(nation, town)
+            }
+            reservedTerritoryIds.forEach { id ->
+                val territory = Territory.fromId(TerritoryId(id)) ?: return@forEach
+                // Defensive: a real town owner always wins and should already imply the
+                // reservation was cleared at claim time (see Town.create/addTerritory) -- this
+                // only guards stale/inconsistent save data.
+                if (territory.town != null) return@forEach
+                nation.reservedTerritories.add(territory.id)
+                territory.reservedNation = nation
             }
             nation.needsUpdate()
             Nodes.nations[name] = nation
@@ -130,12 +147,37 @@ class Nation(
                 town.nation = null
                 town.needsUpdate()
             }
+            nation.reservedTerritories.forEach { id -> Territory.fromId(id)?.reservedNation = null }
+            nation.reservedTerritories.clear()
             nation.towns.clear()
             nation.residents.clear()
             nation.playersOnline.clear()
             Nodes.nations.remove(nation.name)
             Nodes.needsSave = true
             Resident.renderMinimaps()
+        }
+
+        /**
+         * Earmark a still-unclaimed territory for a nation ahead of any town existing on it.
+         * Fails if a real town already owns the territory; re-reserving to a different nation
+         * (or the same one) simply reassigns it.
+         */
+        fun reserveTerritory(nation: Nation, territory: Territory): Result<Territory> {
+            if (territory.town != null) return Result.failure(ErrorTerritoryOwned)
+            territory.reservedNation?.reservedTerritories?.remove(territory.id)
+            territory.reservedNation = nation
+            nation.reservedTerritories.add(territory.id)
+            Nodes.needsSave = true
+            Resident.renderMinimaps()
+            return Result.success(territory)
+        }
+
+        fun unreserveTerritory(territory: Territory): Result<Territory> {
+            territory.reservedNation?.reservedTerritories?.remove(territory.id)
+            territory.reservedNation = null
+            Nodes.needsSave = true
+            Resident.renderMinimaps()
+            return Result.success(territory)
         }
 
         fun addTown(nation: Nation, town: Town): Result<Town> {
@@ -304,6 +346,9 @@ class Nation(
     val residents: MutableSet<Resident> = ConcurrentHashMap.newKeySet()
     val allies: MutableSet<Nation> = ConcurrentHashMap.newKeySet()
     val enemies: MutableSet<Nation> = ConcurrentHashMap.newKeySet()
+    // Still-unclaimed territory earmarked for this nation ahead of any town existing on it.
+    // Source of truth for Territory.reservedNation -- see reserveTerritory/unreserveTerritory.
+    val reservedTerritories: MutableSet<TerritoryId> = ConcurrentHashMap.newKeySet()
 
     // color for displaying on map
     // assign random color by default
@@ -356,6 +401,10 @@ class Nation(
         Message.print(sender, "- Residents${ChatColor.WHITE}: $residents")
         Message.print(sender, "- Allies${ChatColor.WHITE}: $allies")
         Message.print(sender, "- Enemies${ChatColor.WHITE}: $enemies")
+        if (this.reservedTerritories.isNotEmpty()) {
+            val reserved = this.reservedTerritories.joinToString(", ") { it.toString() }
+            Message.print(sender, "- Reserved territories${ChatColor.WHITE}: $reserved")
+        }
     }
 
     /**
@@ -370,6 +419,7 @@ class Nation(
         val towns = n.towns.map { x -> x.name }
         val allies = n.allies.map { x -> x.name }
         val enemies = n.enemies.map { x -> x.name }
+        val reservedTerritories = n.reservedTerritories.map { it.toInt() }
 
         override var jsonString: String? = null
 
@@ -377,6 +427,7 @@ class Nation(
             val towns = this.towns.joinToString(",", "[", "]") { JsonPrimitive(it).toString() }
             val allies = this.allies.joinToString(",", "[", "]") { JsonPrimitive(it).toString() }
             val enemies = this.enemies.joinToString(",", "[", "]") { JsonPrimitive(it).toString() }
+            val reservedTerritories = this.reservedTerritories.joinToString(",", "[", "]")
 
             // Omit the key entirely rather than writing a JSON null -- Deserializer.kt reads
             // this with JsonObject.get("capital")?.asString, which relies on a missing key
@@ -389,7 +440,8 @@ class Nation(
                     "\"color\":[${this.color.r},${this.color.g},${this.color.b}]," +
                     "\"towns\":$towns," +
                     "\"allies\":$allies," +
-                    "\"enemies\":$enemies" +
+                    "\"enemies\":$enemies," +
+                    "\"reservedTerritories\":$reservedTerritories" +
                     "}"
                 )
 

@@ -784,6 +784,42 @@ class NodesTest {
         }
     }
 
+    @Test
+    fun `reserved territory shows on the minimap by nation relationship, and clears once a real town claims it`() {
+        val territory = Nodes.territories.values.filter { it.town == null }.first()
+        val suffix = UUID.randomUUID().toString().take(8)
+        val nation = Nation.create("ReserveNation$suffix").getOrThrow()
+        val otherNation = Nation.create("ReserveOtherNation$suffix").getOrThrow()
+        var town: Town? = null
+        try {
+            Nation.reserveTerritory(nation, territory).getOrThrow()
+            assertEquals(nation, territory.reservedNation)
+            assertTrue(nation.reservedTerritories.contains(territory.id))
+
+            val ownViewer = net.aechronis.nodes.objects.MinimapViewerSnapshot(null, nation, emptySet(), emptySet(), false, emptyList(), null)
+            val otherViewer = net.aechronis.nodes.objects.MinimapViewerSnapshot(null, otherNation, emptySet(), emptySet(), false, emptyList(), null)
+            val chunk = Nodes.territoryChunks[territory.core]!!
+            assertEquals(
+                net.aechronis.nodes.constants.DiplomaticRelationship.NATION,
+                net.aechronis.nodes.objects.MinimapMarkerRenderer.territoryRelationship(ownViewer, chunk),
+            )
+            assertEquals(
+                net.aechronis.nodes.constants.DiplomaticRelationship.NEUTRAL,
+                net.aechronis.nodes.objects.MinimapMarkerRenderer.territoryRelationship(otherViewer, chunk),
+            )
+
+            // A real town claiming the reserved territory releases the reservation.
+            town = Town.create("ReserveTerritoryTown$suffix", territory, null).getOrThrow()
+            assertEquals(null, territory.reservedNation)
+            assertFalse(nation.reservedTerritories.contains(territory.id))
+        } finally {
+            Nation.destroy(nation)
+            Nation.destroy(otherNation)
+            town?.let { Town.destroy(it) }
+            territory.reservedNation = null
+        }
+    }
+
     @AfterAll
     fun tearDown() {
         // if -DkeepRunning=true is set keep server running for manual testing

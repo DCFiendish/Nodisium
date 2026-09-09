@@ -318,6 +318,12 @@ data class Territory(
     // without it, a write on one thread isn't guaranteed to be visible to a read on another.
     @Volatile var town: Town? = null, // town owner
     @Volatile var occupier: Town? = null, // town occupier (after being captured in war)
+    // Nation that's earmarked this still-unclaimed territory ahead of a real town existing on
+    // it (e.g. a Discord-approved nation's planned area before a team picks their spot).
+    // Mirrors `town`/`occupier`: source of truth is Nation.reservedTerritories, this is just the
+    // derived pointer kept in sync by Nation.reserveTerritory/unreserveTerritory and cleared the
+    // moment a real town claims the territory (see Town.create/addTerritory).
+    @Volatile var reservedNation: Nation? = null,
 ) {
     companion object {
         fun count(): Int = Nodes.territories.size

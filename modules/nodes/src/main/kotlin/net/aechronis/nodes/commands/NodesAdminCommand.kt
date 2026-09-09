@@ -689,6 +689,8 @@ class NodesAdminNationCommand : NodesCommand("nation", "nodes.admin") {
             Message.print(player, "/nodesadmin nation removeenemy${ChatColor.WHITE}: Remove enemy from a nation")
             Message.print(player, "/nodesadmin nation capital${ChatColor.WHITE}: Set nation's capital town")
             Message.print(player, "/nodesadmin nation color${ChatColor.WHITE}: Set the color of a nation")
+            Message.print(player, "/nodesadmin nation reserveterritory${ChatColor.WHITE}: Earmark unclaimed territory for a nation")
+            Message.print(player, "/nodesadmin nation unreserveterritory${ChatColor.WHITE}: Release reserved territory")
             Message.print(player, "Run a command with no args to see usage.")
         }
 
@@ -703,6 +705,8 @@ class NodesAdminNationCommand : NodesCommand("nation", "nodes.admin") {
         addSubcommand(NodesAdminNationRemoveEnemyCommand())
         addSubcommand(NodesAdminNationCapitalCommand())
         addSubcommand(NodesAdminNationColorCommand())
+        addSubcommand(NodesAdminNationReserveTerritoryCommand())
+        addSubcommand(NodesAdminNationUnreserveTerritoryCommand())
     }
 }
 
@@ -949,6 +953,49 @@ class NodesAdminNationColorCommand : NodesCommand("color", "nodes.admin") {
             Nation.setColor(context[nationArg], context[rArg], context[gArg], context[bArg])
             Message.print(sender, "Set color of ${context[nationArg].name} to (${context[rArg]}, ${context[gArg]}, ${context[bArg]})")
         }, nationArg, rArg, gArg, bArg)
+    }
+}
+
+class NodesAdminNationReserveTerritoryCommand : NodesCommand("reserveterritory", "nodes.admin") {
+    init {
+        setDefaultExecutor { player, resident, context ->
+            Message.print(player, "Usage: /nodesadmin nation reserveterritory <nation-name> <territory-ids>")
+        }
+
+        val nationArg = ArgumentNation.create("nation-name")
+        val territoriesArg = ArgumentTerritoryArray.create("territory-ids")
+
+        addConsoleSyntax({ sender, context ->
+            var succeeded = 0
+            for (terr in context[territoriesArg]) {
+                val result = Nation.reserveTerritory(context[nationArg], terr)
+                if (result.isSuccess) {
+                    succeeded++
+                } else {
+                    Message.error(sender, "Failed to reserve territory ${terr.id}: ${result.exceptionOrNull()?.message}")
+                }
+            }
+
+            Message.print(sender, "Reserved $succeeded/${context[territoriesArg].size} territories for nation \"${context[nationArg].name}\"")
+        }, nationArg, territoriesArg)
+    }
+}
+
+class NodesAdminNationUnreserveTerritoryCommand : NodesCommand("unreserveterritory", "nodes.admin") {
+    init {
+        setDefaultExecutor { player, resident, context ->
+            Message.print(player, "Usage: /nodesadmin nation unreserveterritory <territory-ids>")
+        }
+
+        val territoriesArg = ArgumentTerritoryArray.create("territory-ids")
+
+        addConsoleSyntax({ sender, context ->
+            for (terr in context[territoriesArg]) {
+                Nation.unreserveTerritory(terr)
+            }
+
+            Message.print(sender, "Released ${context[territoriesArg].size} reserved territories")
+        }, territoriesArg)
     }
 }
 

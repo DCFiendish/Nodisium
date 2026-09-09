@@ -437,12 +437,22 @@ object Deserializer {
                     }
                 }
 
+                // parse reserved (still-unclaimed) territory ids
+                val reservedTerritories: ArrayList<Int> = ArrayList()
+                val reservedTerritoriesArray = nation.get("reservedTerritories")?.asJsonArray
+                if (reservedTerritoriesArray !== null) {
+                    reservedTerritoriesArray.forEach { id ->
+                        reservedTerritories.add(id.asInt)
+                    }
+                }
+
                 val nationObject = Nation.load(
                     uuid,
                     name,
                     capitalName,
                     color,
                     towns,
+                    reservedTerritories,
                 )
 
                 nations.add(nationObject)
