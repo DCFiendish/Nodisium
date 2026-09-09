@@ -164,16 +164,22 @@ class Nation(
          */
         fun reserveTerritory(nation: Nation, territory: Territory): Result<Territory> {
             if (territory.town != null) return Result.failure(ErrorTerritoryOwned)
-            territory.reservedNation?.reservedTerritories?.remove(territory.id)
+            val previousNation = territory.reservedNation
+            previousNation?.reservedTerritories?.remove(territory.id)
+            previousNation?.needsUpdate()
             territory.reservedNation = nation
             nation.reservedTerritories.add(territory.id)
+            nation.needsUpdate()
             Nodes.needsSave = true
             Resident.renderMinimaps()
             return Result.success(territory)
         }
 
         fun unreserveTerritory(territory: Territory): Result<Territory> {
-            territory.reservedNation?.reservedTerritories?.remove(territory.id)
+            territory.reservedNation?.let {
+                it.reservedTerritories.remove(territory.id)
+                it.needsUpdate()
+            }
             territory.reservedNation = null
             Nodes.needsSave = true
             Resident.renderMinimaps()

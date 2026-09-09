@@ -792,9 +792,17 @@ class NodesTest {
         val otherNation = Nation.create("ReserveOtherNation$suffix").getOrThrow()
         var town: Town? = null
         try {
+            // Consume the dirty flag Nation.create() already set, so the check below actually
+            // exercises reserveTerritory's own needsUpdate() call rather than riding create()'s.
+            nation.getSaveState()
+
             Nation.reserveTerritory(nation, territory).getOrThrow()
             assertEquals(nation, territory.reservedNation)
             assertTrue(nation.reservedTerritories.contains(territory.id))
+            // Regression check: reserveTerritory must mark the nation dirty, or the memoized
+            // NationSaveState (see Nation.getSaveState) never picks up the reservation and it
+            // silently fails to persist to towns.json.
+            assertTrue(nation.getSaveState().reservedTerritories.contains(territory.id.toInt()))
 
             val ownViewer = net.aechronis.nodes.objects.MinimapViewerSnapshot(null, nation, emptySet(), emptySet(), false, emptyList(), null)
             val otherViewer = net.aechronis.nodes.objects.MinimapViewerSnapshot(null, otherNation, emptySet(), emptySet(), false, emptyList(), null)
@@ -812,6 +820,7 @@ class NodesTest {
             town = Town.create("ReserveTerritoryTown$suffix", territory, null).getOrThrow()
             assertEquals(null, territory.reservedNation)
             assertFalse(nation.reservedTerritories.contains(territory.id))
+            assertFalse(nation.getSaveState().reservedTerritories.contains(territory.id.toInt()))
         } finally {
             Nation.destroy(nation)
             Nation.destroy(otherNation)

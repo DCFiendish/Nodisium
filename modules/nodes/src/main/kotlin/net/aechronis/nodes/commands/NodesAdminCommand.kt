@@ -990,11 +990,16 @@ class NodesAdminNationUnreserveTerritoryCommand : NodesCommand("unreserveterrito
         val territoriesArg = ArgumentTerritoryArray.create("territory-ids")
 
         addConsoleSyntax({ sender, context ->
+            // Only count territories that were actually reserved -- see
+            // NodesAdminTownAddTerritoryCommand for why unconditionally reporting the full
+            // count regardless of whether anything changed is misleading.
+            var succeeded = 0
             for (terr in context[territoriesArg]) {
+                if (terr.reservedNation != null) succeeded++
                 Nation.unreserveTerritory(terr)
             }
 
-            Message.print(sender, "Released ${context[territoriesArg].size} reserved territories")
+            Message.print(sender, "Released $succeeded/${context[territoriesArg].size} reserved territories")
         }, territoriesArg)
     }
 }
