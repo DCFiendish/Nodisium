@@ -409,16 +409,12 @@ object Deserializer {
 
                 // parse capital town name
                 var capitalName = nation.get("capital")?.asString
-                if (capitalName == null) {
-                    // towns[0] used to be read unconditionally here -- a nation left behind with
-                    // no capital AND no towns (e.g. from a partial prior save, after all its towns
-                    // were removed) threw an uncaught IndexOutOfBoundsException, aborting the load
-                    // of every nation/town/resident instead of just skipping this one malformed
-                    // entry.
-                    if (towns.isEmpty()) {
-                        System.err.println("Capital for nation $name not found and nation has no towns -- skipping")
-                        return@forEach
-                    }
+                if (capitalName == null && towns.isNotEmpty()) {
+                    // A nation with towns but no capital only happens from a partial/malformed
+                    // prior save -- repair it by promoting the first town rather than dropping
+                    // the whole nation. A nation with no towns AND no capital is now a normal,
+                    // valid state (created ahead of its first town being assigned) and loads with
+                    // capitalName left null, not skipped.
                     System.err.println("Capital for: $name not found, setting it to ${towns[0]}")
                     capitalName = towns[0]
                 }

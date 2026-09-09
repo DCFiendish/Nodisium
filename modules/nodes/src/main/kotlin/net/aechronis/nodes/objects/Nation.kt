@@ -28,7 +28,10 @@ private val random = Random()
 class Nation(
     val uuid: UUID,
     var name: String,
-    var capital: Town, // main town in nation, used for nation leadership
+    // Main town in nation, used for nation leadership. Null only while the nation has no towns
+    // yet (e.g. created ahead of a Discord-approved team picking their territory) -- invariant
+    // maintained by addTown/removeTown: capital is non-null whenever towns is non-empty.
+    var capital: Town?,
 ) {
 
     companion object {
@@ -66,29 +69,40 @@ class Nation(
             nation.playersOnline.removeAll { it.uuid in residentIds }
         }
 
-        fun create(name: String, town: Town, leader: Resident? = null): Result<Nation> {
-            if (town.nation != null) return Result.failure(ErrorTownHasNation)
+        /**
+         * Create a nation. `town` is optional -- a nation can exist before its first town
+         * (e.g. approved via Discord ahead of the team picking territory); `addTown` promotes
+         * the first town added to capital automatically.
+         */
+        fun create(name: String, town: Town? = null, leader: Resident? = null): Result<Nation> {
+            if (town != null && town.nation != null) return Result.failure(ErrorTownHasNation)
             if (leader?.nation != null) return Result.failure(ErrorPlayerHasNation)
-            if (leader != null && !town.residents.contains(leader)) return Result.failure(ErrorPlayerNotInTown)
+            if (town != null && leader != null && !town.residents.contains(leader)) return Result.failure(ErrorPlayerNotInTown)
             if (fromName(name) != null) return Result.failure(ErrorNationExists)
 
             val nation = Nation(UUID.randomUUID(), name, town)
-            Town.initializeCapitalLives(town)
             Nodes.nations[name] = nation
-            nation.towns.add(town)
-            town.nation = nation
-            indexTownMembers(nation, town)
-            town.needsUpdate()
+            if (town != null) {
+                Town.initializeCapitalLives(town)
+                nation.towns.add(town)
+                town.nation = nation
+                indexTownMembers(nation, town)
+                town.needsUpdate()
+            }
             nation.needsUpdate()
             Nodes.needsSave = true
             Resident.renderMinimaps()
             return Result.success(nation)
         }
 
-        fun load(uuid: UUID, name: String, capitalName: String, color: Color?, towns: ArrayList<String>): Nation {
-            val capital = Town.fromName(capitalName) ?: throw net.aechronis.nodes.constants.ErrorTownDoesNotExist
+        fun load(uuid: UUID, name: String, capitalName: String?, color: Color?, towns: ArrayList<String>): Nation {
+            val capital = if (capitalName != null) {
+                Town.fromName(capitalName) ?: throw net.aechronis.nodes.constants.ErrorTownDoesNotExist
+            } else {
+                null
+            }
             val nation = Nation(uuid, name, capital)
-            Town.initializeCapitalLives(capital)
+            if (capital != null) Town.initializeCapitalLives(capital)
             if (color != null) nation.color = color
             for (townName in towns) {
                 val town = Town.fromName(townName) ?: continue
@@ -130,6 +144,12 @@ class Nation(
             town.nation = nation
             town.needsUpdate()
             indexTownMembers(nation, town)
+            // First town of a nation created without one (see create()) becomes capital --
+            // keeps the invariant that capital is non-null whenever towns is non-empty.
+            if (nation.capital == null) {
+                nation.capital = town
+                Town.initializeCapitalLives(town)
+            }
             nation.needsUpdate()
             Nodes.needsSave = true
             Resident.renderMinimaps()
@@ -144,9 +164,10 @@ class Nation(
             if (nation.towns.isEmpty()) {
                 destroy(nation)
             } else if (town === nation.capital) {
-                nation.capital = nation.towns.first()
-                Town.initializeCapitalLives(nation.capital)
-                nation.capital.residents.forEach { it.player()?.let { player -> Message.print(player, "Your town is now the capital of ${nation.name}") } }
+                val newCapital = nation.towns.first()
+                nation.capital = newCapital
+                Town.initializeCapitalLives(newCapital)
+                newCapital.residents.forEach { it.player()?.let { player -> Message.print(player, "Your town is now the capital of ${nation.name}") } }
             }
             town.needsUpdate()
             nation.needsUpdate()
@@ -299,7 +320,7 @@ class Nation(
 
     // prints out nation object info
     fun printInfo(sender: CommandSender) {
-        val leader = this.capital.leader?.name ?: "${ChatColor.GRAY}None"
+        val leader = this.capital?.leader?.name ?: "${ChatColor.GRAY}None"
 
         // read info out of towns:
         // - get town names
@@ -329,7 +350,7 @@ class Nation(
         }
 
         Message.print(sender, "${ChatColor.BOLD}Nation ${this.name}:")
-        Message.print(sender, "- Capital${ChatColor.WHITE}: ${this.capital.name}")
+        Message.print(sender, "- Capital${ChatColor.WHITE}: ${this.capital?.name ?: "${ChatColor.GRAY}None"}")
         Message.print(sender, "- Leader${ChatColor.WHITE}: $leader")
         Message.print(sender, "- Towns[${this.towns.size}]${ChatColor.WHITE}: $towns")
         Message.print(sender, "- Residents${ChatColor.WHITE}: $residents")
@@ -344,7 +365,7 @@ class Nation(
     class NationSaveState(n: Nation) : SaveState {
         val uuid = n.uuid
         val name = n.name
-        val capital = n.capital.name
+        val capital: String? = n.capital?.name
         val color = n.color
         val towns = n.towns.map { x -> x.name }
         val allies = n.allies.map { x -> x.name }
@@ -357,10 +378,14 @@ class Nation(
             val allies = this.allies.joinToString(",", "[", "]") { JsonPrimitive(it).toString() }
             val enemies = this.enemies.joinToString(",", "[", "]") { JsonPrimitive(it).toString() }
 
+            // Omit the key entirely rather than writing a JSON null -- Deserializer.kt reads
+            // this with JsonObject.get("capital")?.asString, which relies on a missing key
+            // returning a real Kotlin null; a JsonNull element would throw on .asString instead.
+            val capitalJson = if (this.capital != null) "\"capital\":${JsonPrimitive(this.capital)}," else ""
             val jsonString = (
                 "{" +
                     "\"uuid\":${JsonPrimitive(this.uuid.toString())}," +
-                    "\"capital\":${JsonPrimitive(capital)}," +
+                    capitalJson +
                     "\"color\":[${this.color.r},${this.color.g},${this.color.b}]," +
                     "\"towns\":$towns," +
                     "\"allies\":$allies," +

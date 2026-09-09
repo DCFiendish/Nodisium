@@ -709,11 +709,21 @@ class NodesAdminNationCommand : NodesCommand("nation", "nodes.admin") {
 class NodesAdminNationCreateCommand : NodesCommand("create", "nodes.admin") {
     init {
         setDefaultExecutor { player, resident, context ->
-            Message.print(player, "Usage: /nodesadmin nation create <nation-name> <town-names>")
+            Message.print(player, "Usage: /nodesadmin nation create <nation-name> [town-names]")
         }
 
         val nationArg = ArgumentSanitizedString.create("nation-name")
         val townsArg = ArgumentTownArray.create("town-names")
+
+        // No towns -- e.g. a nation approved via Discord ahead of the team picking their
+        // territory. Nation.create leaves capital null; addTown promotes the first town added.
+        addConsoleSyntax({ sender, context ->
+            Nation.create(context[nationArg]).getOrElse { err ->
+                Message.error(sender, "Failed to create nation: ${err.message}")
+                return@addConsoleSyntax
+            }
+            Message.print(sender, "Created nation \"${context[nationArg]}\" with no towns yet")
+        }, nationArg)
 
         addConsoleSyntax({ sender, context ->
             // create new nation from town

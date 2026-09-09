@@ -71,10 +71,18 @@ private class NodesAdminWarzoneStopCommand : NodesCommand("stop", "nodes.admin")
             val territory = context[territoryArg]
             Warzone.stop(territory)
                 .onSuccess { winner ->
-                    Town.capture(winner.capital, territory)
+                    // A warzone winner always already owns contested territory via a town (see
+                    // NodesAdminWarzoneCommand's "must belong to a town" check), so capital is
+                    // never actually null here -- still guarded since capital is nullable now.
+                    val capital = winner.capital
+                    if (capital == null) {
+                        Message.error(sender, "Warzone winner \"${winner.name}\" has no capital to award territory ${territory.id} to")
+                        return@onSuccess
+                    }
+                    Town.capture(capital, territory)
                     Message.broadcast(
                         "${ChatColor.DARK_RED}[Warzone] ${winner.name} won territory ${territory.id}; " +
-                            "it has been awarded to ${winner.capital.name}",
+                            "it has been awarded to ${capital.name}",
                     )
                 }
                 .onFailure { error -> Message.error(sender, error.message ?: "Failed to stop warzone") }

@@ -763,6 +763,27 @@ class NodesTest {
         assertEquals("[Testville]", plainText)
     }
 
+    @Test
+    fun `nation can be created without a town, then adopts its first town as capital`() {
+        val territory = Nodes.territories.values.filter { it.town == null }.first()
+        val suffix = UUID.randomUUID().toString().take(8)
+        val nation = Nation.create("EmptyNation$suffix").getOrThrow()
+        var town: Town? = null
+        try {
+            assertEquals(null, nation.capital)
+            assertTrue(nation.towns.isEmpty())
+
+            town = Town.create("EmptyNationTown$suffix", territory, null).getOrThrow()
+            Nation.addTown(nation, town).getOrThrow()
+
+            assertEquals(town, nation.capital)
+            assertEquals(setOf(town), nation.towns)
+        } finally {
+            Nation.destroy(nation)
+            town?.let { Town.destroy(it) }
+        }
+    }
+
     @AfterAll
     fun tearDown() {
         // if -DkeepRunning=true is set keep server running for manual testing
