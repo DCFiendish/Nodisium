@@ -43,16 +43,16 @@ class NodesAdminWarzoneCommand : NodesCommand("warzone", "nodes.admin") {
         }
 
         val territoriesArg = ArgumentTerritoryArray.create("territory-ids")
-        addSyntax({ player, _, context ->
+        addConsoleSyntax({ sender, context ->
             val territories = context[territoriesArg]
             val claimed = territories.filter { it.town != null }
             val unclaimed = territories - claimed.toSet()
             Warzone.register(claimed)
             if (claimed.isNotEmpty()) {
-                Message.print(player, "Enabled warzones for territories: ${claimed.joinToString(", ") { it.id.toString() }}")
+                Message.print(sender, "Enabled warzones for territories: ${claimed.joinToString(", ") { it.id.toString() }}")
             }
             if (unclaimed.isNotEmpty()) {
-                Message.error(player, "Warzone territories must belong to a town: ${unclaimed.joinToString(", ") { it.id.toString() }}")
+                Message.error(sender, "Warzone territories must belong to a town: ${unclaimed.joinToString(", ") { it.id.toString() }}")
             }
         }, territoriesArg)
 
@@ -67,7 +67,7 @@ private class NodesAdminWarzoneStopCommand : NodesCommand("stop", "nodes.admin")
         }
 
         val territoryArg = ArgumentTerritory.create("territory-id")
-        addSyntax({ player, _, context ->
+        addConsoleSyntax({ sender, context ->
             val territory = context[territoryArg]
             Warzone.stop(territory)
                 .onSuccess { winner ->
@@ -77,7 +77,7 @@ private class NodesAdminWarzoneStopCommand : NodesCommand("stop", "nodes.admin")
                             "it has been awarded to ${winner.capital.name}",
                     )
                 }
-                .onFailure { error -> Message.error(player, error.message ?: "Failed to stop warzone") }
+                .onFailure { error -> Message.error(sender, error.message ?: "Failed to stop warzone") }
         }, territoryArg)
     }
 }
