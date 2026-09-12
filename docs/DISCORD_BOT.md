@@ -31,6 +31,15 @@ letting them scatter again.
    shown on the website too, so the data source/API should be shared between the bot and the
    website rather than built twice. Stat fields to show: not decided yet.
 
+7. **Auto-upload `.litematica` files to the VM** — for the paid "paste" feature (player buys a
+   build, admin pastes it in via WorldEdit/Litematica): bot takes the uploaded `.litematica` file
+   from Discord and pushes it straight to the server's `schematics` folder on the VM
+   (`WorldEditConfig.saveDir`, see
+   [modules/worldedit/.../WorldEditConfig.kt:37](../modules/worldedit/src/main/kotlin/io/github/openminigameserver/worldedit/platform/config/WorldEditConfig.kt)),
+   replacing the manual SFTP/console step. Needs: upload size/type validation, destination path
+   (probably per-order subfolder so pastes don't collide/overwrite), and who's allowed to trigger
+   it (paying customer only, or staff-confirmed after payment).
+
 ## Explicitly out of scope
 
 - Nation/town membership vetting — stays entirely in-game via `/town apply`/`/town invite`. No
