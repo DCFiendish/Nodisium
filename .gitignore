@@ -26,3 +26,14 @@ desktop.ini
 # not source.
 /server/nodisium-data/
 /server/combat/hats/
+
+# Local scratch: process pid file from run scripts.
+/pid.txt
+
+# Map-generation local scratch: timestamped heightmap backups, raw climate data download,
+# and a downloaded third-party tree pack -- not source, not tracked (same policy as the
+# other agadir-mapgen raw-input/scratch entries above).
+/tools/agadir-mapgen/backups/
+/tools/agadir-mapgen/worldclim/
+/tools/agadir-mapgen/sijmenvb-trees/
+/tools/agadir-mapgen/__pycache__/
