@@ -7,8 +7,8 @@ import net.kyori.adventure.nbt.CompoundBinaryTag
 import net.kyori.adventure.nbt.ListBinaryTag
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.BlockVec
+import net.minestom.server.event.instance.InstanceChunkLoadEvent
 import net.minestom.server.event.player.PlayerBlockBreakEvent
-import net.minestom.server.event.player.PlayerChunkLoadEvent
 import net.minestom.server.instance.Chunk
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockHandler
@@ -26,7 +26,11 @@ object Shelves {
             .filter { it.key().asString().endsWith("_shelf") }
             .forEach { block -> manager.registerHandler(block.key()) { ShelfHandler(block.defaultState()) } }
         Vanilla.eventNode.addListener(PlayerBlockBreakEvent::class.java, ::onBreak)
-        Vanilla.eventNode.addListener(PlayerChunkLoadEvent::class.java, ::onPlayerChunkLoad)
+        // InstanceChunkLoadEvent fires once per chunk load, not once per player who views it --
+        // PlayerChunkLoadEvent fired for every player entering view of an already-loaded chunk,
+        // so a busy chunk re-ran this full block scan on every single one of those, unboundedly,
+        // for the lifetime of the server. See ItemFrames.onChunkLoad for the same fix.
+        Vanilla.eventNode.addListener(InstanceChunkLoadEvent::class.java, ::onChunkLoad)
     }
 
     private fun onBreak(event: PlayerBlockBreakEvent) {
@@ -39,14 +43,27 @@ object Shelves {
 
     private fun isShelf(block: Block): Boolean = block.key().asString().endsWith("_shelf")
 
-    private fun onPlayerChunkLoad(event: PlayerChunkLoadEvent) {
-        val instance = event.player.instance ?: return
-        instance.getChunk(event.chunkX, event.chunkZ)?.let(::restoreChunk)
+    /**
+     * Rebind persisted shelves once, when the chunk itself loads -- not once per player who
+     * later views it. InstanceChunkLoadEvent can fire off the instance's own tick thread (Anvil's
+     * loader thread, same as ItemFrames.onChunkLoad), so only the scan is done here; the actual
+     * block mutation is deferred onto the tick thread via scheduleNextTick.
+     */
+    private fun onChunkLoad(event: InstanceChunkLoadEvent) {
+        val chunk = event.chunk
+        val shelves = scanShelves(chunk)
+        if (shelves.isEmpty()) return
+        event.instance.scheduleNextTick { instance ->
+            if (!chunk.isLoaded || instance.getChunk(chunk.chunkX, chunk.chunkZ) !== chunk) return@scheduleNextTick
+            shelves.forEach { (position, block) ->
+                val handler = MinecraftServer.getBlockManager().getHandler(block.key().asString())
+                if (block.handler()?.key != handler?.key) instance.setBlock(position, block.withHandler(handler), false)
+            }
+        }
     }
 
-    /** Rebind persisted shelves only after their chunk is actually being viewed. */
-    private fun restoreChunk(chunk: Chunk) {
-        if (!chunk.isLoaded) return
+    private fun scanShelves(chunk: Chunk): List<Pair<BlockVec, Block>> {
+        if (!chunk.isLoaded) return emptyList()
         val shelves = mutableListOf<Pair<BlockVec, Block>>()
         chunk.lockReadLock()
         try {
@@ -61,12 +78,7 @@ object Shelves {
         } finally {
             chunk.unlockReadLock()
         }
-        val instance = chunk.instance
-        if (!chunk.isLoaded || instance.getChunk(chunk.chunkX, chunk.chunkZ) !== chunk) return
-        shelves.forEach { (position, block) ->
-            val handler = MinecraftServer.getBlockManager().getHandler(block.key().asString())
-            if (block.handler()?.key != handler?.key) instance.setBlock(position, block.withHandler(handler), false)
-        }
+        return shelves
     }
 
     private fun items(block: Block): MutableList<ItemStack> {

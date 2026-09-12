@@ -16,6 +16,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.AbstractMap.SimpleImmutableEntry
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 // loosely based on https://github.com/Quiet-Terminal-Interactive/Cattlelog
 object PlayerData {
@@ -26,6 +27,15 @@ object PlayerData {
     // detaches it explicitly.
     private var node: EventNode<Event>? = null
     private var task: Task? = null
+
+    // saveAll() does real blocking disk I/O (gzip + write + atomic rename) for every online
+    // player, one after another. The periodic autosave task used to run that directly on
+    // Minestom's shared global scheduler thread pool -- the same pool Crops/Saplings/Food/
+    // EnvironmentalDamage/Combat/Koth's own periodic ticks share -- so a 200-player save sweep
+    // could tie up a pool thread for the whole sweep every 300s. Dispatch it to its own executor
+    // instead so the scheduler pool is never blocked by this.
+    private val autosaveExecutor =
+        Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "vanilla-playerdata-autosave").apply { isDaemon = true } }
 
     fun init(path: Path) {
         val timeStart = System.currentTimeMillis()
@@ -58,7 +68,7 @@ object PlayerData {
         // disconnect) meant every change since the last clean save was gone.
         task = MinecraftServer
             .getSchedulerManager()
-            .buildTask(::saveAll)
+            .buildTask { autosaveExecutor.execute(::saveAll) }
             .repeat(TaskSchedule.seconds(300))
             .schedule()
 
@@ -74,6 +84,7 @@ object PlayerData {
         node = null
         saveAll()
         tracked.clear()
+        autosaveExecutor.shutdown()
     }
 
     fun saveAll() {

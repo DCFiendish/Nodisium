@@ -69,9 +69,12 @@ object Storage {
 
         // Barrels already persist on inventory close, but that only covers barrels a player
         // actually opened and closed cleanly -- this is a periodic safety net for the rest.
+        // saveAll() returns its completion future rather than blocking; the periodic run below
+        // fires-and-forgets it instead of joining, so this doesn't tie up the shared scheduler
+        // pool thread for as long as the barrel writes + chunk saves take (see saveAll() below).
         task = MinecraftServer
             .getSchedulerManager()
-            .buildTask(::saveAll)
+            .buildTask { saveAll() }
             .repeat(TaskSchedule.seconds(300))
             .schedule()
 
@@ -83,7 +86,9 @@ object Storage {
     fun stop() {
         task?.cancel()
         task = null
-        saveAll()
+        // Block here (unlike the periodic autosave) -- shutdown must not proceed until the
+        // final save has actually landed on disk.
+        saveAll().join()
     }
 
     fun keyFor(
@@ -148,17 +153,21 @@ object Storage {
         return true
     }
 
-    fun saveAll() {
-        // saveAll() runs on the global scheduler thread (like Crops'/Saplings' periodic tasks),
-        // which per Minestom's threading model has no synchronization guarantee for touching
-        // chunk/block state directly. writeToBlock() -> setBlock() used to run straight from here
-        // with no deferral -- unlike every other periodic block-touching task in this codebase --
-        // so this 300s autosave sweep could race a player's own in-progress interaction with the
-        // same barrel on the instance's real tick thread, corrupting the write or dropping it
-        // (items silently vanish from the barrel). Defer each write onto its owning instance's own
-        // tick thread instead, same as Crops.growthTick, and wait for all of them (via
-        // self-completed futures, since scheduleNextTick doesn't hand back one) before moving on to
-        // the chunk-save step below, which depends on the writes already having happened.
+    /**
+     * Writes every tracked barrel back to its block and flushes the touched chunks to disk,
+     * returning a future that completes once that's done. Deliberately non-blocking: this used
+     * to `.join()` on both stages inline, which -- since this runs on Minestom's shared global
+     * scheduler thread pool (the same pool Crops/Saplings/Food/EnvironmentalDamage/Combat/Koth's
+     * own periodic ticks share) -- tied up a pool thread for as long as every barrel write plus
+     * every chunk save took, once every 300s. Callers that must wait (e.g. `stop()`, which needs
+     * the save to have actually landed before shutdown proceeds) can `.join()` the returned
+     * future themselves; the periodic autosave task does not.
+     */
+    fun saveAll(): CompletableFuture<Void> {
+        // writeToBlock() -> setBlock() touches chunk/block state, which per Minestom's threading
+        // model isn't safe from the global scheduler thread -- defer each write onto its owning
+        // instance's own tick thread instead, same as Crops.growthTick, using self-completed
+        // futures since scheduleNextTick doesn't hand one back.
         val chunks = ConcurrentHashMap.newKeySet<Chunk>()
         val writeFutures = barrels.keys.map { key ->
             val future = CompletableFuture<Void>()
@@ -173,18 +182,18 @@ object Storage {
             }
             future
         }
-        try {
-            CompletableFuture.allOf(*writeFutures.toTypedArray()).join()
-        } catch (e: Exception) {
-            System.err.println("Failed to wait for one or more storage writes: ${e.message}")
-        }
-
-        val saves = chunks.map { chunk -> chunk.instance.saveChunkToStorage(chunk) }
-        try {
-            CompletableFuture.allOf(*saves.toTypedArray()).join()
-        } catch (e: Exception) {
-            System.err.println("Failed to save one or more storage chunks: ${e.message}")
-        }
+        return CompletableFuture
+            .allOf(*writeFutures.toTypedArray())
+            .exceptionally { e ->
+                System.err.println("Failed to wait for one or more storage writes: ${e.message}")
+                null
+            }.thenCompose {
+                val saves = chunks.map { chunk -> chunk.instance.saveChunkToStorage(chunk) }
+                CompletableFuture.allOf(*saves.toTypedArray())
+            }.exceptionally { e ->
+                System.err.println("Failed to save one or more storage chunks: ${e.message}")
+                null
+            }
     }
 
     fun remove(key: BlockKey) {

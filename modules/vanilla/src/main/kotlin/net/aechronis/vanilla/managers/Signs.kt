@@ -25,6 +25,7 @@ import net.minestom.server.network.packet.server.play.OpenSignEditorPacket
 import net.minestom.server.tag.Tag
 import net.minestom.server.utils.Direction
 import org.everbuild.blocksandstuff.common.item.DroppedItemFactory
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
@@ -34,7 +35,10 @@ object Signs {
     private const val FRONT_TEXT = "front_text"
     private const val BACK_TEXT = "back_text"
     private const val WAXED = "is_waxed"
-    private val sessions = mutableMapOf<Player, EditSession>()
+
+    // Was a plain HashMap mutated from concurrent per-player edit/close events -- same bug
+    // class already fixed elsewhere in this codebase (Elevator/Storage/Recipes/Mannequin/Blocks).
+    private val sessions = ConcurrentHashMap<Player, EditSession>()
 
     private data class EditSession(
         val instance: Instance,

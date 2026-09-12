@@ -12,10 +12,14 @@ import net.minestom.server.event.player.PlayerGameModeChangeEvent
 import net.minestom.server.event.player.PlayerInputEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object Vanish {
     private const val DOUBLE_SHIFT_WINDOW_MILLIS = 500L
-    private val vanished = mutableMapOf<UUID, State>()
+
+    // Was a plain HashMap mutated from concurrent per-player input/spawn/disconnect events --
+    // same bug class already fixed elsewhere in this codebase (Elevator/Storage/Recipes/etc).
+    private val vanished = ConcurrentHashMap<UUID, State>()
 
     private data class State(
         val level: Int,
@@ -25,7 +29,7 @@ object Vanish {
 
     fun level(player: Player): Int = (5 downTo 1).firstOrNull { player.hasPermission("vanilla.vanish.$it") } ?: 0
 
-    fun isVanished(player: Player): Boolean = player.uuid in vanished
+    fun isVanished(player: Player): Boolean = vanished.containsKey(player.uuid)
 
     fun toggle(player: Player) {
         if (isVanished(player)) {

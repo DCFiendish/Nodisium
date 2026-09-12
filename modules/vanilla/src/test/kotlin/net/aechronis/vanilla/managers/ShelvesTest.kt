@@ -8,7 +8,7 @@ import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.PlayerHand
 import net.minestom.server.event.EventDispatcher
-import net.minestom.server.event.player.PlayerChunkLoadEvent
+import net.minestom.server.event.instance.InstanceChunkLoadEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockFace
 import net.minestom.server.instance.block.BlockHandler
@@ -38,14 +38,22 @@ class ShelvesTest : ManagerTest() {
     }
 
     @Test
-    fun `player chunk load restores a persisted shelf handler`() {
+    fun `chunk load restores a persisted shelf handler`() {
         val player = VanillaTest.createPlayer(Pos(52.0, 65.0, 52.0))
         val position = BlockVec(52, 64, 52)
         VanillaTest.instance.setBlock(position, Block.OAK_SHELF)
+        val chunk = VanillaTest.instance.getChunkAt(position)!!
 
-        EventDispatcher.call(PlayerChunkLoadEvent(player, position.chunkX(), position.chunkZ()))
+        EventDispatcher.call(InstanceChunkLoadEvent(VanillaTest.instance, chunk))
 
-        val restored = VanillaTest.instance.getBlock(position)
+        // The handler rebind is deferred onto the next instance tick (see Shelves.onChunkLoad).
+        var restored = VanillaTest.instance.getBlock(position)
+        var waited = 0
+        while (restored.handler()?.key != Block.OAK_SHELF.key() && waited < 2000) {
+            Thread.sleep(20)
+            waited += 20
+            restored = VanillaTest.instance.getBlock(position)
+        }
         assertEquals(Block.OAK_SHELF.key(), restored.handler()?.key)
         VanillaTest.remove(player)
     }
