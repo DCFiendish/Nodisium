@@ -1607,3 +1607,83 @@ the gap in.
   GitHub UI. Unconfirmed whether this was ever done — check before assuming either way.
 - Task #13 from an earlier session's list: replace the nodes-map loading-screen logo with Nodisium
   branding — blocked on the user producing artwork.
+
+## Status update (2026-09-12): WorldPainter fully removed, real map confirmed, real borders painted and deployed
+
+Direct resolution of the 2026-09-07 `LAUNCH_CHECKLIST.md` item ("User found a public map to use
+instead of the WorldPainter/SRTM15+ pipeline"). That item was under-specified when written; this
+session traced through the actual working tree (not just docs) to confirm what's real:
+
+- **The "public map" is a real Underilla-downloaded Europe world**, already sitting locally at
+  `server/nodisium-data/world` (785MB, standard single-player layout — `level.dat`/`region/`
+  directly under the world root, no `dimensions/` nesting like the old WorldPainter export had).
+  `AgadirWorld.kt` was already pointing at it (uncommitted `WorldBorder` + `VoidTerrain` changes
+  found this session) — its class-level doc comment still said "WorldPainter/SRTM15+" and has been
+  corrected. `Main.kt` also already had the pvp-playtest boot swapped out for this map's boot; both
+  files' comments now match what the code actually does.
+- **`tools/agadir-mapgen/` (the entire WorldPainter pipeline — wpscript, SRTM15+ heightmap
+  conversion, WorldClim precipitation masks, tree `.layer` files, `MakeLayer.java`, everything
+  described in that directory's now-deleted README) is deleted.** WorldPainter is not used anywhere
+  in this project anymore. The `nodisium-data/world.v1-vegetated-backup`/`world.v2-wpscript-backup`
+  folders are its old output, left alone (not referenced by any code, harmless to delete manually
+  if disk space matters).
+- **Real border/territory painting for this map already existed, half-finished, from an earlier
+  session's scratchpad** (never committed anywhere): `fit_transform.py` (bilinear lon/lat→block
+  transform fit from 5 real anchor points including the Straits of Gibraltar/Messina) and
+  `paint_borders.py` (real point-in-polygon against actual country border GeoJSON, `AUT`-`TUN`,
+  filtered by the real map's own biome data via the `anvil` library) had already been run, producing
+  `nation_chunks.json` — real per-nation chunk sets for all 10 launch nations. This session moved
+  the whole pipeline into `tools/nodes-real-borders/` (was only in a temp scratchpad, one cleanup
+  away from being lost) and wrote a new script, `build_real_nodes.py`, to subdivide those chunk
+  sets into ~4-chunk-radius territories (Voronoi + Lloyd relaxation, same technique as a parallel
+  nodepainting session's throwaway-server work) and emit a real `world.json`/`towns.json` in
+  `Deserializer`'s exact schema. See that directory's README for the full pipeline and known gaps
+  (notably: land inside the crop box not covered by one of the 10 real border polygons is left
+  with no territory at all, not painted as Wilderness — deliberately skipped rather than a full
+  ~165k-chunk biome scan for territories nobody can claim yet).
+- **Real, concrete bug found and fixed**: emitting `"capital": null` for a capital-less nation
+  crashed `Deserializer.townsFromJson` with `UnsupportedOperationException: JsonNull` — Gson's
+  `.get("capital")` on a JSON `null` literal returns a `JsonNull` element, not Kotlin `null`, and
+  `?.asString` on that throws instead of short-circuiting. Fixed by omitting the key entirely for
+  nations with no capital (only real difference between an explicit `null` and a missing key, as
+  far as Gson's `.get()` is concerned).
+- **Deployed and boot-verified**: `server/nodisium-data/nodes/world.json`/`towns.json` (previously
+  the 2-town flat-world test fixture, per this doc's earlier "nodisium-data/nodes/ still holds... the
+  original small 2-town flat-world test fixture" line above — no longer true) now hold 534
+  territories across the 10 real nations (France 131/6579 chunks, Spain 106/5327, Morocco 86/4345,
+  Germany 83/4247, Italy 54/2732, UK 39/1915, Portugal 14/719, Switzerland 13/661, Belgium 6/332,
+  Netherlands 2/87). **Nations pre-reserve their territories** (`Nation.reservedTerritories`) —
+  deliberately no placeholder towns, matching the just-shipped "nation can exist and reserve
+  territory ahead of any town" feature, so a real town (e.g. via the planned Discord bot) claims
+  already-earmarked land later instead of a disposable capital-town fixture. Old test-fixture data
+  backed up to `server/nodisium-data/nodes/backup/` before overwrite. Confirmed via a full local
+  `gradlew.bat :server:run` boot: clean load (no exceptions, no "Error loading world"), stable
+  ~20 TPS over multiple tick-monitor windows.
+- **Not done this session, real open items**:
+  - **No deploy to the Oracle VM.** This was all local (`server/nodisium-data/`, not pushed
+    anywhere) — the earlier 2026-08-25 "no deploys" guardrail was about the old
+    WorldPainter/AgadirWorld state and is superseded by this real replan, but nobody has actually
+    SSH'd the new world + nodes data to the VM yet. Next real step if launch is getting close.
+  - **The real map's own open bug is still open**: `LAUNCH_CHECKLIST.md` flagged "several chunks on
+    it are corrupted — root cause not yet diagnosed" on 2026-09-07. Not investigated this session.
+    `paint_borders.py` reads real biome data from this same map to decide land vs. ocean per chunk
+    — a corrupted chunk could misclassify silently. Worth a real look before treating the 534
+    territories above as final.
+  - **Land outside the 10 real border polygons has no territory at all** (see
+    `tools/nodes-real-borders/README.md`'s "Known gaps") — Austria/the rest of the box's land is
+    simply unclaimed, not painted Wilderness. Low priority (nobody can claim it yet either way) but
+    worth deciding on before launch, since an uncovered gap between two real nations' territories
+    plays differently than a deliberately-neutral one.
+  - Node/territory-painting UI/workflow (`nodes.soy`'s editor, per the 2026-09-07 checklist note)
+    was not used this session — this data was built by script, not painted by hand. Fine for a
+    first pass; hand-touch-ups (the kind of border nitpicking this session's throwaway-server
+    nodepainting work went through — Balkans/Trieste/Gibraltar/river-mouth precision) still need
+    the real editor once someone's looking at this real map in-game.
+  - **Two other live sessions were found working on this exact same checkout concurrently**
+    (`aechronis-7b`/`aechronis-bb`) and had just committed `aa6bcad2`/`02263f90` minutes before this
+    was written — including `Nation.autoReserveUnclaimedTerritory()` (`/nodesadmin nation
+    autoreserveterritory`, flood-fills remaining free territory to the nearest nation). That command
+    is the natural fix for the "land outside the 10 real border polygons has no territory" gap two
+    bullets up, once someone paints territories over that land — flagged to both sessions so nobody's
+    commit clobbers the other's uncommitted work; not yet confirmed whether either session saw the
+    concurrency note before committing again.
