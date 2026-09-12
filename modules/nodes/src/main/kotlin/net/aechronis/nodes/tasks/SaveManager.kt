@@ -13,6 +13,7 @@ package net.aechronis.nodes.tasks
 import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.objects.BuildingSaveState
 import net.aechronis.nodes.objects.Nation.NationSaveState
+import net.aechronis.nodes.objects.OreBlockCache
 import net.aechronis.nodes.objects.Resident.ResidentSaveState
 import net.aechronis.nodes.objects.Town.TownSaveState
 import net.aechronis.nodes.serdes.Serializer
@@ -84,6 +85,20 @@ class TaskSaveBuildings(
     override fun run() {
         val jsonStr = Serializer.buildingsToJson(buildingsSnapshot)
         AtomicFiles.writeString(pathBuildingsSave, jsonStr)
+    }
+}
+
+// Was defined (OreBlockCache.save()) but never called anywhere -- the anti-dupe ledger of
+// already-mined ore blocks was loaded on boot but never written back to disk, so every restart
+// silently wiped it and reopened the place-then-rebreak ore exploit it exists to close. Runs
+// alongside the other save tasks whenever the world is dirty (see NodesWorldListener setting
+// Nodes.needsSave on every new hidden-ore mine).
+class TaskSaveOreCache(
+    val cache: OreBlockCache,
+    val pathOreCache: Path,
+) : Runnable {
+    override fun run() {
+        cache.save(pathOreCache)
     }
 }
 

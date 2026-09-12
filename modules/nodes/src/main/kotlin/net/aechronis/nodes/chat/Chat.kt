@@ -42,7 +42,7 @@ object Chat {
     fun process(event: PlayerChatEvent) {
         // FIRST MOST IMPORTANT: APPLY GREENTEXT
         var msg = event.rawMessage
-        if (msg[0] == '>') {
+        if (msg.isNotEmpty() && msg[0] == '>') {
             msg = "${colorGreen}$msg"
         }
 

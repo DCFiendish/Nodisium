@@ -63,6 +63,10 @@ class IncomeInventory {
 
     fun owns(inventory: AbstractInventory): Boolean = inventory === _inventory
 
+    // Stable identity for Town.incomeInventoryIndex -- doesn't materialize/synchronize the GUI
+    // the way getInventory() does, just exposes the reference to key a lookup map by.
+    internal val handle: AbstractInventory get() = _inventory
+
     fun synchronizeFromInventory(): Boolean = synchronized(lock) { synchronizeFromInventoryLocked() }
 
     private fun synchronizeFromInventoryLocked(): Boolean {

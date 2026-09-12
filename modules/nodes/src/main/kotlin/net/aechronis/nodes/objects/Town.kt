@@ -67,7 +67,14 @@ class Town(
 
         fun fromPlayer(player: Player): Town? = Resident.fromPlayer(player)?.town
 
-        internal fun fromIncomeInventory(inventory: AbstractInventory): Town? = Nodes.towns.values.firstOrNull { town -> town.income.owns(inventory) }
+        // Keyed by inventory identity, not a linear scan -- unlike fromUuid above (a rare,
+        // command-triggered lookup where "towns are few" holds), this backs a listener that
+        // fires on every inventory click/item-change event server-wide (see
+        // NodesIncomeInventoryListener), so its cost multiplies with inventory-interaction
+        // frequency, not just town count.
+        private val incomeInventoryIndex: ConcurrentHashMap<AbstractInventory, Town> = ConcurrentHashMap()
+
+        internal fun fromIncomeInventory(inventory: AbstractInventory): Town? = incomeInventoryIndex[inventory]
 
         fun areAllied(town1: Town?, town2: Town?): Boolean {
             if (town1 == null || town2 == null) return false
@@ -386,6 +393,7 @@ class Town(
             }
 
             Nodes.towns.remove(town.name)
+            incomeInventoryIndex.remove(town.income.handle, town)
             Nodes.needsSave = true
             Resident.renderMinimaps()
         }
@@ -736,6 +744,8 @@ class Town(
 
         // generate initial json string (must be at end to capture state after leader added)
         this.saveState = TownSaveState(this)
+
+        incomeInventoryIndex[income.handle] = this
     }
 
     override fun hashCode(): Int = this.uuid.hashCode()

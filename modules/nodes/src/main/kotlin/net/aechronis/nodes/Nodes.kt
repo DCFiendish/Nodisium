@@ -53,6 +53,7 @@ import net.aechronis.nodes.tasks.SaveManager
 import net.aechronis.nodes.tasks.SerialSaveQueue
 import net.aechronis.nodes.tasks.TaskSaveBackup
 import net.aechronis.nodes.tasks.TaskSaveBuildings
+import net.aechronis.nodes.tasks.TaskSaveOreCache
 import net.aechronis.nodes.tasks.TaskSaveWorld
 import net.aechronis.nodes.utils.loadLongFromFile
 import net.aechronis.nodes.war.FlagWar
@@ -492,6 +493,7 @@ object Nodes {
                                 backupTimestamp,
                             ),
                             buildingTask = TaskSaveBuildings(buildings.map { it.getSaveState() }, config.pathBuildings),
+                            oreCacheTask = TaskSaveOreCache(hiddenOreInvalidBlocks, config.pathOreCache),
                             revision = dirtyRevision,
                             backupTimestamp = backupTimestamp,
                         ).also { if (backupTimestamp != null) backupPending = true }
@@ -526,6 +528,7 @@ object Nodes {
                     measureNanoTime {
                         request.worldTask?.run()
                         request.buildingTask?.run()
+                        request.oreCacheTask?.run()
                         request.backupTask?.run()
                     }
                 println("[Nodes] Saved world in ${elapsed}ns")
@@ -552,6 +555,7 @@ object Nodes {
     private data class SaveRequest(
         val worldTask: TaskSaveWorld? = null,
         val buildingTask: TaskSaveBuildings? = null,
+        val oreCacheTask: TaskSaveOreCache? = null,
         val backupTask: TaskSaveBackup? = null,
         val revision: Long? = null,
         val backupTimestamp: Long? = null,

@@ -30,7 +30,9 @@ import net.minestom.server.event.player.PlayerBlockInteractEvent
 object NodesChestProtectionListener {
     private fun onBlockInteract(event: PlayerBlockInteractEvent) {
         val player: Player = event.player
-        val resident: Resident = Resident.fromPlayer(player)!!
+        // Not `!!` -- this can be null for a moment during /nodesadmin load, which clears and
+        // repopulates Nodes.residents on a different thread than the one this event fires on.
+        val resident: Resident = Resident.fromPlayer(player) ?: return
         if (!resident.isProtectingChests) {
             return
         }

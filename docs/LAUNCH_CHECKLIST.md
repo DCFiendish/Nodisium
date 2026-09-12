@@ -12,9 +12,11 @@ tick time (unbatched broadcasts, per-tick allocations, synchronous I/O on an eve
 scans) gets fixed or reverted before it ships, full stop — this is the single thing the playerbase
 cares about most.
 
-Current branch has uncommitted work: `modules/nodes/.../FlagWar.kt` (a blocking-save fix, per
-`NODES_DEEP_DIVE.md` H8), `docs/HANDOFF.md`/`NODES_DEEP_DIVE.md` updates, and deleted
-`server/resourcepack.zip` (build output, regenerate via `jar cf` per `HANDOFF.md`).
+`FlagWar.kt`'s H8 blocking-save fix (both `WarSerializer.save()` calls in
+`resolveTownDefeat()` made async) landed and is committed (2026-09-12), alongside a new
+`Nation.autoReserveUnclaimedTerritory()` map-setup tool (`/nodesadmin nation autoreserveterritory`).
+Current branch has uncommitted work only in `modules/nodes/.../TestWeapons.kt` (mid-edit weapon
+roster changes, unrelated to this list).
 
 ---
 
@@ -34,8 +36,11 @@ Current branch has uncommitted work: `modules/nodes/.../FlagWar.kt` (a blocking-
   biome data (not hand-tuned boxes) and subdivides into ~4-chunk territories. Deployed to
   `server/nodisium-data/nodes/`, boot-verified. Nations pre-reserve their territories
   (`Nation.reservedTerritories`) — no towns created yet. Real open gaps: land outside the 10
-  nations' real border polygons has no territory at all (not Wilderness, just unclaimed — see that
-  tool's README), and Trieste/Gibraltar/river-mouth-scale hand precision hasn't been touched here —
+  nations' real border polygons had no territory at all (not Wilderness, just unclaimed) is now
+  **mostly closed (2026-09-12)**: `Nation.autoReserveUnclaimedTerritory()` flood-fills remaining free
+  territory to the nearest nation, run via `/nodesadmin nation autoreserveterritory`. Territory
+  equidistant between two nations is deliberately left contested for hand-assignment — not a bug,
+  by design. Trieste/Gibraltar/river-mouth-scale hand precision still hasn't been touched —
   `nodes.soy`'s editor is still the reference for that kind of touch-up once someone's looking at
   this map in-game.
 - Alliances and towns get set up **after** node painting is done — sequencing, not parallel work.
@@ -155,9 +160,10 @@ All CRITICAL fixed. Still open:
   user 2026-09-07**: only admin (`/nodesadmin town leader`, "NDA" = the admin role) should be able
   to change town leader. A Discord-ticket-triggered admin command (§1, Ticket Tool v2 idea) is the
   one floated way to make this less manual, not a player-facing command.
-- **H8** — `Resident.renderMinimaps()` render-storm risk during large sieges: partially fixed
-  (2026-09-03 same-tick CAS debounce), a further blocking-save fix landed 2026-09-07 (uncommitted,
-  `FlagWar.kt`) — re-verify status directly against current code before treating this as closed.
+- ~~**H8** — `Resident.renderMinimaps()` render-storm risk during large sieges.~~ **Fixed and
+  committed 2026-09-12**: 2026-09-03 same-tick CAS debounce plus `FlagWar.resolveTownDefeat()`'s two
+  `WarSerializer.save()` calls switched to async (was blocking the main thread on disk I/O during
+  every town defeat/annex).
 - **M10** — wilderness permission checks skipped entirely for block-interact events (doors/levers).
 - **M12** — home-teleport warmup only cancels on full-block movement, not strafing/teleport-events.
 - **M13** — friendly-fire listener has no FlagWar/siege awareness.

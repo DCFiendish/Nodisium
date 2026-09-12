@@ -173,6 +173,9 @@ object NodesWorldListener {
 
                 // temporarily invalide block location
                 Nodes.hiddenOreInvalidBlocks.add(blockPos)
+                // Ledger must survive a restart or place-then-rebreak farming reopens -- see
+                // TaskSaveOreCache, which only runs when a save is actually dirty.
+                Nodes.needsSave = true
             }
         }
     }
@@ -389,6 +392,7 @@ object NodesWorldListener {
         // invalide hidden ore blocks
         if (Nodes.config.oreBlocks.contains(block)) {
             Nodes.hiddenOreInvalidBlocks.add(blockPos)
+            Nodes.needsSave = true
         }
     }
 
