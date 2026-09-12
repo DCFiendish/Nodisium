@@ -186,6 +186,61 @@ class Nation(
             return Result.success(territory)
         }
 
+        /**
+         * One-shot map setup tool, not a live gameplay mechanic: multi-source BFS flood-fill
+         * that reserves every still-free territory (no town, no existing reservation) to
+         * whichever nation's owned+reserved land is closest to it, hopping only through other
+         * free territories (can't flood through land another nation already holds). A territory
+         * reachable in the same number of hops from two+ nations is left unclaimed rather than
+         * guessed at -- meant to be hand-assigned afterward, same as any other contested border.
+         * Run once from console after nations/towns are placed on a real map; calling it again
+         * later only fills in territory that's still free, it never reassigns an existing
+         * reservation or town claim.
+         */
+        fun autoReserveUnclaimedTerritory(): Pair<Int, Int> {
+            fun isFree(t: Territory) = t.town == null && t.reservedNation == null
+
+            // Seed: every already-owned/reserved territory's free neighbors, tagged with the
+            // nation(s) touching them this round.
+            var frontier = HashMap<TerritoryId, MutableSet<Nation>>()
+            for (nation in Nodes.nations.values) {
+                val ownedTerritoryIds = nation.towns.asSequence().flatMap { it.territories.asSequence() } +
+                    nation.reservedTerritories.asSequence()
+                for (id in ownedTerritoryIds) {
+                    val territory = Nodes.territories[id] ?: continue
+                    for (neighborId in territory.neighbors) {
+                        val neighbor = Nodes.territories[neighborId] ?: continue
+                        if (isFree(neighbor)) frontier.getOrPut(neighborId) { mutableSetOf() }.add(nation)
+                    }
+                }
+            }
+
+            val visited = HashSet<TerritoryId>()
+            var reserved = 0
+            var contested = 0
+            while (frontier.isNotEmpty()) {
+                val nextFrontier = HashMap<TerritoryId, MutableSet<Nation>>()
+                for ((id, candidates) in frontier) {
+                    if (!visited.add(id)) continue
+                    val territory = Nodes.territories[id] ?: continue
+                    val nation = candidates.singleOrNull()
+                    if (nation == null) {
+                        contested++
+                        continue
+                    }
+                    reserveTerritory(nation, territory)
+                    reserved++
+                    for (neighborId in territory.neighbors) {
+                        if (neighborId in visited) continue
+                        val neighbor = Nodes.territories[neighborId] ?: continue
+                        if (isFree(neighbor)) nextFrontier.getOrPut(neighborId) { mutableSetOf() }.add(nation)
+                    }
+                }
+                frontier = nextFrontier
+            }
+            return Pair(reserved, contested)
+        }
+
         fun addTown(nation: Nation, town: Town): Result<Town> {
             if (town.nation != null) return Result.failure(ErrorTownHasNation)
             nation.towns.add(town)

@@ -829,6 +829,51 @@ class NodesTest {
         }
     }
 
+    @Test
+    fun `auto-reserve claims a free territory for the nearest nation and leaves contested ones alone`() {
+        fun isFree(t: net.aechronis.nodes.objects.Territory) = t.town == null && t.reservedNation == null
+        fun neighborsOf(t: net.aechronis.nodes.objects.Territory) =
+            Sequence { t.neighbors.iterator() }.mapNotNull { Nodes.territories[it] }
+
+        // Find a free territory (ours) with a free neighbor (target) that isn't itself bordering
+        // any other already-owned/reserved territory -- otherwise the target would legitimately
+        // come out contested once our nation joins as a second candidate, which is correct
+        // behavior but would make this test's assertion depend on unrelated fixture state.
+        val (ours, target) = Nodes.territories.values.asSequence()
+            .filter { isFree(it) }
+            .flatMap { candidate ->
+                neighborsOf(candidate)
+                    .filter { isFree(it) }
+                    .filter { target -> neighborsOf(target).all { it.id == candidate.id || isFree(it) } }
+                    .map { candidate to it }
+            }
+            .first()
+
+        val suffix = UUID.randomUUID().toString().take(8)
+        val nation = Nation.create("AutoReserveNation$suffix").getOrThrow()
+        val beforeReserved = Nodes.territories.values.filter { it.reservedNation != null }.map { it.id }.toSet()
+        var town: Town? = null
+        try {
+            town = Town.create("AutoReserveTown$suffix", ours, null).getOrThrow()
+            Nation.addTown(nation, town).getOrThrow()
+
+            val (reserved, _) = Nation.autoReserveUnclaimedTerritory()
+            assertTrue(reserved >= 1)
+            assertEquals(nation, target.reservedNation)
+
+            // Running it again is a no-op for territory it already filled in -- idempotent, no
+            // double-reservation or crash on an already-claimed neighbor.
+            Nation.autoReserveUnclaimedTerritory()
+            assertEquals(nation, target.reservedNation)
+        } finally {
+            Nodes.territories.values
+                .filter { it.reservedNation != null && it.id !in beforeReserved }
+                .forEach { Nation.unreserveTerritory(it) }
+            Nation.destroy(nation)
+            town?.let { Town.destroy(it) }
+        }
+    }
+
     @AfterAll
     fun tearDown() {
         // if -DkeepRunning=true is set keep server running for manual testing

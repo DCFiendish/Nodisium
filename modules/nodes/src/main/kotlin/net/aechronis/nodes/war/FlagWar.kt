@@ -513,7 +513,7 @@ object FlagWar {
     ): TownDefeatOutcome {
         if (mode != AttackMode.WAR) {
             Town.annex(attackerTown, defeatedTown)
-            WarSerializer.save(false)
+            WarSerializer.save(true)
             return TownDefeatOutcome.ANNEXED
         }
 
@@ -535,8 +535,10 @@ object FlagWar {
         needsSave = true
         // Persist the life and per-war defeat marker together. towns.json will catch up
         // through the normal world save queue; war.json is the journal used to recover
-        // either value after an abrupt stop.
-        WarSerializer.save(false)
+        // either value after an abrupt stop. async=true -- this runs on the main thread
+        // during finishAttack(); a synchronous AsynchronousFileChannel write here blocked
+        // the whole server for the disk I/O on every single defeat/annex.
+        WarSerializer.save(true)
         return outcome
     }
 

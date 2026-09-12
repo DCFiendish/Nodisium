@@ -691,6 +691,7 @@ class NodesAdminNationCommand : NodesCommand("nation", "nodes.admin") {
             Message.print(player, "/nodesadmin nation color${ChatColor.WHITE}: Set the color of a nation")
             Message.print(player, "/nodesadmin nation reserveterritory${ChatColor.WHITE}: Earmark unclaimed territory for a nation")
             Message.print(player, "/nodesadmin nation unreserveterritory${ChatColor.WHITE}: Release reserved territory")
+            Message.print(player, "/nodesadmin nation autoreserveterritory${ChatColor.WHITE}: Flood-fill remaining free territory to the nearest nation (map setup tool, not for live use)")
             Message.print(player, "Run a command with no args to see usage.")
         }
 
@@ -707,6 +708,7 @@ class NodesAdminNationCommand : NodesCommand("nation", "nodes.admin") {
         addSubcommand(NodesAdminNationColorCommand())
         addSubcommand(NodesAdminNationReserveTerritoryCommand())
         addSubcommand(NodesAdminNationUnreserveTerritoryCommand())
+        addSubcommand(NodesAdminNationAutoReserveTerritoryCommand())
     }
 }
 
@@ -1001,6 +1003,19 @@ class NodesAdminNationUnreserveTerritoryCommand : NodesCommand("unreserveterrito
 
             Message.print(sender, "Released $succeeded/${context[territoriesArg].size} reserved territories")
         }, territoriesArg)
+    }
+}
+
+class NodesAdminNationAutoReserveTerritoryCommand : NodesCommand("autoreserveterritory", "nodes.admin") {
+    init {
+        setDefaultExecutor { player, resident, context ->
+            Message.print(player, "Usage: /nodesadmin nation autoreserveterritory")
+        }
+
+        addConsoleSyntax({ sender, context ->
+            val (reserved, contested) = Nation.autoReserveUnclaimedTerritory()
+            Message.print(sender, "Auto-reserved $reserved territories; $contested left unclaimed (equidistant between nations)")
+        })
     }
 }
 
