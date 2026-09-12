@@ -30,10 +30,14 @@ object SaplingsListener {
         event.isCancelled = true
         val instance = player.instance ?: return
         val key = BlockKey(instance, event.blockPosition.asVec())
-        val planted = Saplings.saplings.getOrPut(key) { SaplingsPlanted(type, System.currentTimeMillis()) }
+        // computeIfAbsent (not getOrPut, which is a plain get-then-conditional-put even on a
+        // ConcurrentHashMap) makes creation atomic; synchronized(planted) makes the read-increment
+        // of its mutable `boneMeal` field atomic too -- two players bonemealing the same sapling
+        // at once used to be able to race on both, silently discarding one increment.
+        val planted = Saplings.saplings.computeIfAbsent(key) { SaplingsPlanted(type, System.currentTimeMillis()) }
+        val ready = synchronized(planted) { ++planted.boneMeal >= Vanilla.config.saplingBoneMealAmount }
 
-        planted.boneMeal++
-        if (planted.boneMeal >= Vanilla.config.saplingBoneMealAmount) {
+        if (ready) {
             if (planted.type.giant && Saplings.tryGiant(instance, key.pos, planted.type)) {
                 return
             }

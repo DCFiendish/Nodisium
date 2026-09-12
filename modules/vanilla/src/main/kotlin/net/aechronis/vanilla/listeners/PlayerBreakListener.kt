@@ -9,6 +9,7 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.component.EnchantmentList
 import net.minestom.server.item.enchant.Enchantment
+import kotlin.random.Random
 
 object PlayerBreakListener {
     fun onBlockBreak(event: PlayerBlockBreakEvent) {
@@ -52,6 +53,21 @@ object PlayerBreakListener {
         for (stack in drops) {
             if (!stack.isAir && stack.amount() > 0) Items.spawn(instance, dropPos, stack)
         }
+
+        val damagedTool = heldItem.damageWithUnbreaking(1)
+        if (damagedTool !== heldItem) player.itemInMainHand = damagedTool
+    }
+
+    // Minestom's ItemStack.damage() is a mechanical no-op unless the item actually carries a
+    // DAMAGE component, and it already breaks the item into ItemStack.AIR at max damage on its
+    // own -- but it knows nothing about the Unbreakable flag or the Unbreaking enchantment's
+    // damage-skip chance, both of which are real vanilla behavior a tool-durability feature needs.
+    private fun ItemStack.damageWithUnbreaking(amount: Int): ItemStack {
+        if (get(DataComponents.UNBREAKABLE) != null) return this
+        val unbreakingLevel = get(DataComponents.ENCHANTMENTS, EnchantmentList.EMPTY).level(Enchantment.UNBREAKING)
+        // Vanilla's chance to actually apply damage is 1/(level+1) -- level 0 (no enchant) always damages.
+        if (unbreakingLevel > 0 && Random.nextInt(unbreakingLevel + 1) != 0) return this
+        return damage(amount)
     }
 
     fun init() {

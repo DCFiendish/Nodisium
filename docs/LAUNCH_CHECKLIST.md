@@ -168,19 +168,24 @@ All CRITICAL fixed. Still open:
   the existing `/ally` command instead of a separate treaty mechanic. No new code needed here.
 
 ### `modules/vanilla`
-**User says a lot of these are already stale/fixed (2026-09-07) — this list has NOT been
-individually re-verified against current code.** Same caveat as before, now doubly true: don't
-assume any specific item below is still open or closed without checking the actual source first.
-**Not re-verified against current code the way `nodes` was** — `VANILLA_DEEP_DIVE.md` itself wasn't
-touched in the 2026-09-02 pass (only `Combat.kt`'s `tagOne` cooldown map was confirmed fixed
-separately). Treat the following as **unconfirmed, check before relying on this list**:
-- CRITICAL: barrel-break item duplication (unclosed viewer GUI), KillShop purchase race
-  (double-spend), concurrent shutdown/disconnect-save corruption, `Commands.kt`'s plain `HashMap`s
-  on the save/load hot path.
-- HIGH: missing ore→resource block-drop table (iron/gold/diamond/etc. all drop the ore block
-  itself — directly blocks the mining economy), fall-damage teleport-reset gap, unsynchronized
-  whitelist file writes, blocking disk I/O in barrel-migration on an event thread, `Recipes`/
-  `Mannequin` plain-`HashMap` races, no autosave/crash durability for `PlayerData`/`Storage`.
+**Re-verified against current code 2026-09-12 (see `VANILLA_DEEP_DIVE.md`'s 2026-09-12 banner for
+full detail) — all CRITICAL and HIGH items are now fixed, plus all actionable MEDIUMs, plus a new
+tool-durability/Unbreaking feature that never existed at all.** Cross-checked against
+`Aechronis/aechronis` upstream along the way; ported nothing wholesale since upstream hadn't fixed
+the barrel-migration/Saplings/Elevator items either, but confirmed their unrelated
+scheduler-thread-mutates-state pattern (`Crops`/`Combat`/`Food`/`EnvironmentalDamage`) is left
+exactly as-is even 40+ commits later — that MEDIUM item is treated as a non-issue, not re-litigated.
+- CRITICAL: **all fixed or moot.** KillShop/Shop was removed entirely (not patched). Barrel-break
+  dupe, PlayerData shutdown/disconnect-save race, and `Commands.kt`'s hot-path `HashMap`s are all
+  fixed.
+- HIGH: **all fixed.** Ore→resource drop table filled in, fall-damage teleport-reset rewritten
+  (also closes the old Slow Falling/Feather Falling/elytra gaps), whitelist writes synchronized,
+  `Recipes`/`Mannequin` converted to `ConcurrentHashMap`, autosave added for both `PlayerData` and
+  `Storage`, and legacy-barrel-migration's blocking I/O made async.
+- MEDIUM: Saplings' `getOrPut` race and Elevator's explosion-staleness gap both fixed this pass;
+  `VanillaConfig` validation and the remaining thread-safety conversions were already fixed as of
+  the same pass. Tool durability — previously entirely unimplemented — now exists, with a real
+  Unbreaking enchantment skip-chance and Unbreakable-flag check neither this fork nor upstream had.
 
 ---
 
@@ -209,9 +214,8 @@ itself (exists, staff structure done), WorldEdit (confirmed working in-game).
    editor, set alliances/towns, paste the KOTH map + wire warps — this is the current single biggest
    "world doesn't really exist yet" blocker and everything else in §1 (tiers, alliances, KOTH) is
    sequenced behind it.
-2. Re-verify `VANILLA_DEEP_DIVE.md` against current code (cheap, and the barrel-dupe/KillShop-race
-   items are real economy-integrity risks if still open — user believes several are already fixed,
-   worth confirming which).
+2. ~~Re-verify `VANILLA_DEEP_DIVE.md` against current code~~ **Done 2026-09-12** — all CRITICAL/HIGH
+   fixed, all actionable MEDIUMs fixed, tool durability/Unbreaking added. See that doc's banner.
 3. Run the real load-test ladder against the current VM once the new map is live — this is the
    actual evidence for the 20 TPS commitment, not the current unverified estimate.
 4. Stand up DDoS Layer 1+2 before the server is ever publicly reachable — this is explicitly called

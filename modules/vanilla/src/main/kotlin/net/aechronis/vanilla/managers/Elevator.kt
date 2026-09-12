@@ -71,6 +71,16 @@ object Elevator {
         val targetY = if (step > 0) col.higher(floorY) else col.lower(floorY)
         if (targetY == null || abs(targetY - floorY) > Vanilla.config.elevatorMaxSearch) return
 
+        // The cache only updates on player-driven place/break -- an explosion or other external
+        // edit can silently remove the cached floor's iron block. Re-verify it's still there before
+        // teleporting; if not, drop the stale entry (self-healing, same pattern as Saplings'
+        // growthTick re-checking the block is still a sapling) and bail instead of dropping the
+        // player onto a now-missing floor.
+        if (instance.getBlock(bx, targetY, bz, TYPE) !== IRON) {
+            col.remove(targetY)
+            return
+        }
+
         if (instance.getBlock(bx, targetY + 1, bz, TYPE)?.isAir == true &&
             instance.getBlock(bx, targetY + 2, bz, TYPE)?.isAir == true
         ) {

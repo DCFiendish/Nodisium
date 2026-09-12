@@ -207,17 +207,33 @@ object Storage {
             .withHandler(handler)
     }
 
+    // Was key.instance.saveChunkToStorage(chunk).join() -- called synchronously from
+    // loadOrCreate(), which runs on the interacting player's own event-dispatch thread (via
+    // StorageListener.onInteract/onBreak). The first player to touch any legacy-format barrel
+    // stalled their own interaction on a real blocking chunk write. Migration correctness doesn't
+    // require the caller to wait: the block's own NBT (written by writeToBlock() just before this
+    // is called) already carries the migrated contents, so it's safe to let the chunk save and the
+    // legacy-file archive/rename finish asynchronously.
     private fun persistAndArchiveMigration(
         key: BlockKey,
         file: Path,
     ) {
         val chunk = key.instance.getChunkAt(key.pos) ?: return
-        key.instance.saveChunkToStorage(chunk).join()
-        Files.move(
-            file,
-            file.resolveSibling("${file.fileName}.migrated"),
-            StandardCopyOption.REPLACE_EXISTING,
-        )
+        key.instance.saveChunkToStorage(chunk).whenComplete { _, error ->
+            if (error != null) {
+                System.err.println("Failed to save chunk during legacy barrel migration at $key: ${error.message}")
+                return@whenComplete
+            }
+            runCatching {
+                Files.move(
+                    file,
+                    file.resolveSibling("${file.fileName}.migrated"),
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            }.onFailure { error ->
+                System.err.println("Failed to archive migrated legacy barrel file $file: ${error.message}")
+            }
+        }
     }
 
     private fun legacyFileFor(key: BlockKey): Path? {
