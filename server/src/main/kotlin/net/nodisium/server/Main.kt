@@ -8,30 +8,28 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.command.ConsoleSender
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
-import net.minestom.server.instance.anvil.AnvilLoader
 import net.nodisium.server.modules.ModuleContext
 import net.nodisium.server.modules.ModuleManager
 import net.nodisium.server.modules.ModulesCommand
 import java.nio.file.Path
 
 fun main() {
-    // Pvp playtest boot: the Nodisium Playtest Map (a purpose-built arena, not the Agadir Crisis
-    // terrain -- see AgadirWorld.kt for that one, still available, just not attached below).
-    // StoneFlatTerrain.generator still covers any chunk outside the imported box so the world
-    // never has unrendered holes. Spawn point per the map author.
-    val spawnPoint = Pos(150.0, 105.0, 150.0)
+    // Agadir Crisis map boot: real Underilla-sourced Europe terrain, cropped to the 1911
+    // participants' box (see AgadirWorld.kt). VoidTerrain.generator covers any chunk outside the
+    // crop, paired with AgadirWorld.WORLD_BORDER so players are pushed back before they'd reach
+    // it. Pvp-playtest-map boot (StoneFlatTerrain + FullbrightChunk) is still available, just not
+    // attached below -- see git history for that block if it's needed again.
+    // Spawn point is the crop box's center (see AgadirWorld.WORLD_BORDER); Y=150 is comfortably
+    // above tree canopy at that column (confirmed by scanning the chunk directly -- ground itself
+    // is under trees there, not a clean spot to spawn on).
+    val spawnPoint = Pos(-750.0, 150.0, 1250.0)
     val instance = createTestServer(
-        generator = StoneFlatTerrain.generator,
+        generator = VoidTerrain.generator,
         spawnPoint = spawnPoint,
         auth = Auth.Offline(),
         port = 25567,
     )
-    // The map was exported with the datapack-style dimension layout (dimensions/minecraft/overworld/region/...)
-    // rather than the standard single-player format (region/ at the root), so AnvilLoader needs the
-    // overworld subfolder directly -- pointing it at the map root finds no region/ and silently falls
-    // back to StoneFlatTerrain.generator for every chunk.
-    instance.setChunkLoader(AnvilLoader(Path.of("nodisium-data/nodisium-playtest-map/dimensions/minecraft/overworld")))
-    instance.setChunkSupplier(::FullbrightChunk)
+    AgadirWorld.attach(instance)
     // Real permission gating -- see Permissions.kt kdoc. Enabled before any command registers so
     // every hasPermission check from here on resolves against real group data, not a missing provider.
     Permissions.init()
