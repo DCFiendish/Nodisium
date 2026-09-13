@@ -23,6 +23,31 @@ Same methodology and depth as [NODES_DEEP_DIVE.md](NODES_DEEP_DIVE.md) and [COMB
 > its violation logging to once per 5s per player. The two remaining LOW items (the global
 > `Commands` inventory-sync lock, and the small bounded O(n) refreshes in `Koth`/`Vanish`) were
 > left as-is -- they're accepted trade-offs at current scale, not bugs.
+>
+> **Fifth pass, 2026-09-12 (same day) — remaining files, no new bugs found.** Read every file not
+> already covered by Parts 1-4: every command class (`Give`/`Craft`/`Convert`/`Clear`/`EnderChest`/
+> `Teleport`/`InventorySee`/`Kill`/`GameMode`/`Gm`/`Ignore`/`Back`/`Fly`/`Whitelist`/`KothCommand`/
+> `SetWarpCommand`/`WarpCommand`/`Message`/`Reply`/`List`/`Broadcast`/`Vote`/`Music`), every
+> remaining listener (`WhitelistListener`/`FoodListener`/`CropsPlantListener`/`SaplingsListener`/
+> `ItemListener`/`RecipesListener`/`BlocksListener`/`MannequinListener`/`TreeFellerListener`), the
+> crafting-match objects (`RecipesWorkspace`/`Shaped`/`RecipesShapeless`), `TreeFeller`/`Items`, and
+> `Vanilla.kt`'s own init/shutdown orchestration plus `VanillaLiveModule.kt`. No new correctness or
+> lag bugs found -- the command-surface gaps found are all already-tracked LOW items from Part 2
+> (missing clamps/feedback, e.g. `Give` not checking whether `addItemStack` actually fit, same
+> class as `/fly`'s missing clamp).
+>
+> One real suspicion was raised and then ruled out on inspection, worth recording so it isn't
+> re-litigated: `Vanilla.eventNode` is a singleton `val` never recreated by `init()`, and
+> `shutdown()` only detaches it from the global handler (`removeChild`) rather than clearing its
+> registered listeners -- so a naive re-`init()` after `shutdown()` on the *same* loaded class would
+> re-register every manager's listeners on top of the old ones, duplicating every event handler on
+> the server. Checked how this is actually invoked: `server/.../modules/ModuleManager.kt` hot-swaps
+> `vanilla` by loading each generation through its own fresh `ModuleClassLoader`
+> (`ModuleClassLoader.kt`), so `Vanilla` is a genuinely different class (with a genuinely fresh
+> `eventNode`) on every reload generation -- the old generation's listener-laden `Vanilla` object
+> is only reachable via the old classloader, which is `.close()`d right after `shutdown()`. So this
+> is **not a bug**: the per-generation-classloader design is exactly what prevents the static-state
+> reuse problem that would otherwise exist. No action needed.
 
 ### HIGH
 
