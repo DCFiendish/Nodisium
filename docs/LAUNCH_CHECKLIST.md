@@ -27,10 +27,8 @@ roster changes, unrelated to this list).
   `server/nodisium-data/world` and wired up in `AgadirWorld.kt`/`Main.kt`. WorldPainter
   (`tools/agadir-mapgen/`) is fully deleted — not used anywhere in this project anymore. See
   `docs/HANDOFF.md`'s 2026-09-12 entry for the full trace.
-- **The "several chunks corrupted" bug from 2026-09-07 was never diagnosed and is still open** —
-  not investigated in the 2026-09-12 pass either. Worth a real look before trusting the border data
-  below as final (`tools/nodes-real-borders/paint_borders.py` reads this same map's real biome data
-  to decide land vs. ocean per chunk, so a corrupted chunk could misclassify silently).
+- ~~**The "several chunks corrupted" bug from 2026-09-07**~~ **Dropped 2026-09-13** — user flew
+  the map and found nothing corrupted. Treated as a non-issue, not re-litigated.
 - **Node/territory painting: done for a first pass, script-built, not hand-painted.**
   `tools/nodes-real-borders/` classifies real country border polygons against the real map's real
   biome data (not hand-tuned boxes) and subdivides into ~4-chunk territories. Deployed to
@@ -43,10 +41,11 @@ roster changes, unrelated to this list).
   by design. Trieste/Gibraltar/river-mouth-scale hand precision still hasn't been touched —
   `nodes.soy`'s editor is still the reference for that kind of touch-up once someone's looking at
   this map in-game.
-- Alliances and towns get set up **after** node painting is done — sequencing, not parallel work.
-  Node painting has had its first pass now; towns/alliances still not started.
+- Alliances and towns get set up **after** node painting is done, and deliberately held until
+  right before public launch (user decision, 2026-09-13) — not started, not being worked yet.
 - KOTH map needs to be pasted into the new world, then warps + KOTH arena setup done on top of it —
-  currently just a floating schematic/build, not placed.
+  currently just a floating schematic/build, not placed on this map at all yet (user will paste it
+  in later, 2026-09-13).
 - Rivers/hydrology — zero data sourced yet, and the real downloaded map's own hydrology hasn't been
   checked either way — confirm whether it already has rivers before treating this as still open.
 - Custom terrain brushes per biome zone — moot now that WorldPainter (the thing that needed
@@ -221,10 +220,10 @@ docs/DISCORD_BOT.md).
 
 ## Suggested order
 
-1. **Fix the new map's corrupted chunks**, then run node/territory painting via the `nodes.soy`
-   editor, set alliances/towns, paste the KOTH map + wire warps — this is the current single biggest
-   "world doesn't really exist yet" blocker and everything else in §1 (tiers, alliances, KOTH) is
-   sequenced behind it.
+1. **Node/territory painting needs real hand-touch-up** via the `nodes.soy` editor (contested
+   equidistant territory, Trieste/Gibraltar/river-mouth precision) — script-first-pass quality isn't
+   good enough. Alliances/towns and the KOTH map paste-in are both deliberately deferred to
+   right-before-launch, not blocking this work.
 2. ~~Re-verify `VANILLA_DEEP_DIVE.md` against current code~~ **Done 2026-09-12** — all CRITICAL/HIGH
    fixed, all actionable MEDIUMs fixed, tool durability/Unbreaking added. See that doc's banner.
 3. Run the real load-test ladder against the current VM once the new map is live — this is the
