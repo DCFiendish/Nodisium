@@ -119,57 +119,6 @@ object TestWeapons {
             usableZones = listOf(wildernessOrWarzoneOnly),
         )
 
-    // The team's Mural weapon-planning board (see docs/HANDOFF.md) named these; stats below are
-    // rough placeholders (the M1911's magazine size/heart-per-shot are the board's own numbers,
-    // everything else is a guess) -- a real balance pass will replace all of it, so no effort went
-    // into precise falloff/recoil/spread tuning here. "arasaka" (an SMG on the board) isn't
-    // implemented -- not a real WWI-era weapon name, needs the team to clarify what it actually is.
-    val m1911Round =
-        Ammo(
-            name = "m1911_round",
-            ammoType = AmmoType.PISTOL,
-            itemName = Component.text("M1911 Round"),
-        )
-
-    val m1911 =
-        Gun(
-            name = "m1911",
-            itemName = Component.text("Colt M1911"),
-            ammo = m1911Round,
-            magazineSize = 7,
-            damageFalloff = DamageFalloff(maxDamage = 2f, falloffStartRange = 20.0, falloffEndRange = 40.0, minDamage = 2f),
-            automatic = false,
-            cooldownMs = 400,
-            reloadMs = 1500,
-            recoilMin = 1f,
-            recoilMax = 2f,
-            spreadMin = 0.5f,
-            spreadMax = 1.5f,
-        )
-
-    val mauserC96Round =
-        Ammo(
-            name = "mauser_c96_round",
-            ammoType = AmmoType.PISTOL,
-            itemName = Component.text("Mauser C96 Round"),
-        )
-
-    val mauserC96 =
-        Gun(
-            name = "mauser_c96",
-            itemName = Component.text("Mauser C96"),
-            ammo = mauserC96Round,
-            magazineSize = 10,
-            damageFalloff = DamageFalloff(maxDamage = 2f, falloffStartRange = 20.0, falloffEndRange = 40.0, minDamage = 2f),
-            automatic = false,
-            cooldownMs = 400,
-            reloadMs = 1800,
-            recoilMin = 1f,
-            recoilMax = 2f,
-            spreadMin = 0.5f,
-            spreadMax = 1.5f,
-        )
-
     val mp18Magazine =
         Ammo(
             name = "mp18_magazine",
@@ -193,22 +142,113 @@ object TestWeapons {
             spreadMax = 4f,
         )
 
-    val tommyGunMagazine =
+    // Lebel M1886 mesh reused for a different historical rifle (see resourcepack/CREDITS.md) --
+    // exported through obj3, verified in Blockbench only, not yet checked against the real client.
+    val gewehr98Round =
         Ammo(
-            name = "tommy_gun_magazine",
-            ammoType = AmmoType.MACHINE_GUN,
-            itemName = Component.text("Tommy Gun Magazine"),
+            name = "gewehr_98_round",
+            ammoType = AmmoType.RIFLE,
+            itemName = Component.text("7.92x57mm Mauser Round"),
         )
 
-    val tommyGun =
+    val gewehr98 =
         Gun(
-            name = "tommy_gun",
-            itemName = Component.text("Tommy Gun"),
-            ammo = tommyGunMagazine,
-            magazineSize = 30,
-            damageFalloff = DamageFalloff(maxDamage = 1.5f, falloffStartRange = 10.0, falloffEndRange = 30.0, minDamage = 1f),
+            name = "gewehr_98",
+            itemName = Component.text("Gewehr 98"),
+            material = Material.IRON_INGOT,
+            customModelData = "lebel_m1886_import",
+            ammo = gewehr98Round,
+            magazineSize = 6,
+            maxRange = 512.0,
+            damageFalloff = DamageFalloff(maxDamage = 12f, falloffStartRange = 512.0, falloffEndRange = 512.0, minDamage = 12f),
+            automatic = false,
+            cooldownMs = 1250,
+            reloadMs = 5000,
+            recoilMin = 13.5f,
+            recoilMax = 21f,
+            spreadMin = 4f,
+            spreadMax = 9f,
+            sprintSpreadMultiplier = 2.5f,
+            usableZones = listOf(outsidePvpPrepZone),
+        )
+
+    // No model sourced/converted yet -- renders as the base Material until one is (see
+    // docs/HANDOFF.md's asset-sourcing plan). Recoil/spread borrowed from kar98k's bolt-action
+    // tuning since no gun-specific numbers were given.
+    val leeEnfieldRound =
+        Ammo(
+            name = "lee_enfield_round",
+            ammoType = AmmoType.RIFLE,
+            itemName = Component.text(".303 British Round"),
+        )
+
+    val leeEnfield =
+        Gun(
+            name = "lee_enfield",
+            itemName = Component.text("Lee-Enfield"),
+            ammo = leeEnfieldRound,
+            magazineSize = 7,
+            maxRange = 512.0,
+            damageFalloff = DamageFalloff(maxDamage = 14f, falloffStartRange = 512.0, falloffEndRange = 512.0, minDamage = 14f),
+            automatic = false,
+            cooldownMs = 1250,
+            reloadMs = 5000,
+            recoilMin = 13.5f,
+            recoilMax = 21f,
+            spreadMin = 4f,
+            spreadMax = 9f,
+            sprintSpreadMultiplier = 2.5f,
+            usableZones = listOf(outsidePvpPrepZone),
+        )
+
+    val mosinNagantRound =
+        Ammo(
+            name = "mosin_nagant_round",
+            ammoType = AmmoType.RIFLE,
+            itemName = Component.text("7.62x54mmR Round"),
+        )
+
+    val mosinNagant =
+        Gun(
+            name = "mosin_nagant",
+            itemName = Component.text("Mosin-Nagant"),
+            ammo = mosinNagantRound,
+            magazineSize = 5,
+            maxRange = 512.0,
+            damageFalloff = DamageFalloff(maxDamage = 10f, falloffStartRange = 512.0, falloffEndRange = 512.0, minDamage = 10f),
+            automatic = false,
+            cooldownMs = 1250,
+            reloadMs = 4500,
+            recoilMin = 13.5f,
+            recoilMax = 21f,
+            spreadMin = 4f,
+            spreadMax = 9f,
+            sprintSpreadMultiplier = 2.5f,
+            usableZones = listOf(outsidePvpPrepZone),
+        )
+
+    // Beretta Model 57 mesh -- visually an M12-style SMG, not the historical pistol the name
+    // suggests (see resourcepack/CREDITS.md) -- reused for the board's "Beretta M1918". Magazine
+    // size picked from the 20-25 range given; cooldownMs is a placeholder, user flagged this needs
+    // real playtesting to land the right automatic fire rate.
+    val berettaM1918Magazine =
+        Ammo(
+            name = "beretta_m1918_magazine",
+            ammoType = AmmoType.MACHINE_GUN,
+            itemName = Component.text("Beretta M1918 Magazine"),
+        )
+
+    val berettaM1918 =
+        Gun(
+            name = "beretta_m1918",
+            itemName = Component.text("Beretta M1918"),
+            material = Material.IRON_INGOT,
+            customModelData = "beretta_57",
+            ammo = berettaM1918Magazine,
+            magazineSize = 20,
+            damageFalloff = DamageFalloff(maxDamage = 1f, falloffStartRange = 10.0, falloffEndRange = 30.0, minDamage = 0.5f),
             automatic = true,
-            cooldownMs = 120,
+            cooldownMs = 130,
             reloadMs = 2800,
             recoilMin = 0.5f,
             recoilMax = 1.5f,
@@ -257,12 +297,13 @@ object TestWeapons {
     // baked model that way, not via item_model like the older item-model-based guns above. No
     // itemModelEmpty/Reloading/Aiming variant exists yet for this pipeline (see docs/HANDOFF.md --
     // GUI icon and per-state pose swap are still open), so it renders as one fixed model in every
-    // state. No damage falloff -- a flat 12.7f (6 hearts through full leather armor: 7 armor, 0
-    // toughness, vanilla's armor formula) at any range out to maxRange 512.0, the render-distance
-    // ceiling this project might push to. DamageFalloff still requires start/end fields, so
-    // maxDamage==minDamage with falloffStartRange==falloffEndRange==maxRange just means "constant
-    // across the whole range" -- no separate flat-damage type needed. Real bolt-action stats
-    // otherwise -- 5-round magazine, slow single-shot cooldown/reload, heavy recoil, tight spread.
+    // state. No damage falloff -- a flat 8f (4 hearts) at any range out to maxRange 512.0, the
+    // render-distance ceiling this project might push to. DamageFalloff still requires start/end
+    // fields, so maxDamage==minDamage with falloffStartRange==falloffEndRange==maxRange just means
+    // "constant across the whole range" -- no separate flat-damage type needed. Real bolt-action
+    // stats otherwise -- 5-round magazine, slow single-shot cooldown/reload, heavy recoil, tight
+    // spread. cooldownMs/reloadMs are the midpoint of the 1-1.5s / 3.5-4s ranges given (no range
+    // support on these fields).
     val kar98k =
         Gun(
             name = "kar98k",
@@ -273,10 +314,10 @@ object TestWeapons {
             ammo = kar98kRound,
             magazineSize = 5,
             maxRange = 512.0,
-            damageFalloff = DamageFalloff(maxDamage = 12.7f, falloffStartRange = 512.0, falloffEndRange = 512.0, minDamage = 12.7f),
+            damageFalloff = DamageFalloff(maxDamage = 8f, falloffStartRange = 512.0, falloffEndRange = 512.0, minDamage = 8f),
             automatic = false,
-            cooldownMs = 1050,
-            reloadMs = 1820,
+            cooldownMs = 1250,
+            reloadMs = 3750,
             recoilMin = 13.5f,
             recoilMax = 21f,
             spreadMin = 4f,
@@ -290,10 +331,13 @@ object TestWeapons {
     fun register() {
         Item.registerItems(
             bayonet, artilleryShell, fieldGun, shotgunShell, shotgun,
-            m1911Round, m1911, mauserC96Round, mauserC96,
-            mp18Magazine, mp18, tommyGunMagazine, tommyGun,
+            mp18Magazine, mp18,
             usTrenchKnife, nahkampfmesser, couteauPoignard,
             kar98kRound, kar98k,
+            gewehr98Round, gewehr98,
+            leeEnfieldRound, leeEnfield,
+            mosinNagantRound, mosinNagant,
+            berettaM1918Magazine, berettaM1918,
         )
     }
 }
