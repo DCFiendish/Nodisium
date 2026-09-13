@@ -1,15 +1,41 @@
 # Discord Bot — Planned Features
 
-Status: planning only, nothing built yet. This doc exists to stop these ideas from living only in
-chat history / memory files, scattered across `LAUNCH_CHECKLIST.md`, `RESEARCH.md`, and
-`research-todo/07-community-and-onboarding.md`. Add to this list as new ideas come up instead of
-letting them scatter again.
+Status: v1 built and live (console bridge + war start/end webhook, see "Built so far" below). This
+doc exists to stop these ideas from living only in chat history / memory files, scattered across
+`LAUNCH_CHECKLIST.md`, `RESEARCH.md`, and `research-todo/07-community-and-onboarding.md`. Add to
+this list as new ideas come up instead of letting them scatter again.
+
+## Built so far
+
+- **Console bridge bot** — separate repo, `DCFiendish/nodisium-discord-bot` (private), deployed as
+  a systemd service (`nodisium-discord-bot.service`) on the same VM as the game server
+  (150.136.235.233), not a Pterodactyl-managed server — creating one needs panel admin API access
+  this deploy doesn't have. Runs as an unprivileged `discordbot` system user, capped at 256MB
+  RAM / 25% CPU, `Restart=always`. A message typed by an Admin/Owner-role member in the `#console`
+  channel gets sent as a console command via the Pterodactyl Client API, reacts ✅/❌, and echoes
+  back whatever the server printed to console in the following ~1.5s (via Pterodactyl's websocket
+  console stream). `TickMonitor` lines get pulled out and batch-posted to `#tickmonitor` instead of
+  cluttering command replies. See that repo's README for setup/deploy details.
+- **War start/end webhook** — `/nodesadmin war enable`/`disable` post to the `#events` channel via
+  a plain Discord webhook (not the bot), added directly in
+  [DiscordWebhook.kt](../modules/nodes/src/main/kotlin/net/aechronis/nodes/DiscordWebhook.kt) and
+  wired into [NodesAdminCommand.kt](../modules/nodes/src/main/kotlin/net/aechronis/nodes/commands/NodesAdminCommand.kt).
+  The webhook URL lives in `nodisium-data/discord_war_webhook.txt` on the VM (`chmod 600`), not in
+  source or an env var — this server's Pterodactyl egg has no such startup variable and adding one
+  needs panel admin access. `/nodesadmin war skirmish` does not post (not asked for yet).
+- Found and fixed along the way: a "testing-only" `Nodes.enableWar()` call in
+  `NodesLiveModule.initialize()` was re-enabling war on every `/modules reload nodes`, not just
+  first boot — removed. Also found (and spun off, now fixed) a separate pre-existing bug where
+  zero-argument `/nodesadmin` console commands (war enable/disable, save, load, etc.) silently
+  failed to dispatch via Pterodactyl/console while working fine in-game.
 
 ## Features
 
 1. **Staff-command automation** — bot runs `/nodesadmin town leader` when a staff member opens a
    Ticket Tool v2 support ticket for a leader-transfer request. Leader transfer stays admin-only by
    design (not player-facing); this just removes the manual console step. Floated, not committed.
+   The console bridge (above) already lets staff run this by hand from Discord today; the
+   ticket-triggered automation part is still undone.
 
 2. **In-game ↔ Discord identity linking** — link a player's Minecraft account to their Discord
    account. Aspirational, not scoped yet (no verification flow, no data model decided).
@@ -47,8 +73,15 @@ letting them scatter again.
 
 ## Open questions across all features above
 
-- Bot hosting: self-hosted process vs. a serverless/webhook-only approach.
+- ~~Bot hosting: self-hosted process vs. a serverless/webhook-only approach.~~ Resolved: self-hosted
+  systemd service on the same VM (see "Built so far"). Confirmed the VM has plenty of headroom
+  (23GB RAM / 4 cores, game server capped at its own fixed 18.9GB regardless of what else runs) so
+  this doesn't compete with scaling the game server up.
 - What backs `/stats` and the website stats page — read directly from the server's data store, or
-  through a small API the server exposes?
+  through a small API the server exposes? Still open — leaning toward a small read-only HTTP API
+  added to the Minestom server itself, shared by both the bot and the static website, so the data
+  source isn't built twice. Not started.
 - Auth/permissions model for any bot command that touches server state (leader-transfer, nation
-  approval).
+  approval). Still open for bot-triggered actions specifically. The console bridge itself is
+  gated to the Admin/Owner Discord roles only (not the general Staff role) since it can run
+  arbitrary console commands.
