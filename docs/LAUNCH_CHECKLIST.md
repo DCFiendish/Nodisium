@@ -202,7 +202,6 @@ exactly as-is even 40+ commits later — that MEDIUM item is treated as a non-is
 - DDoS Layer 1 vendor (TCPShield free tier recommended default) and Layer 3 build-vs-adapt
   (port EpicGuard's design vs. build Minestom-native).
 - CI/testing minimum bar.
-- Discord↔game chat bridge mechanism — self-hosted bot vs. webhooks, undecided.
 - Website/shop payment processor — not picked yet, gates the Coins shop going live.
 - Public-map corruption diagnosis (§1) — need source/tool/symptom before this is even a scoped
   problem, not a preference decision, but blocking either way.
@@ -210,7 +209,9 @@ exactly as-is even 40+ commits later — that MEDIUM item is treated as a non-is
 **Resolved since the first pass of this doc** (kept here so nobody re-litigates them): project name
 (Nodisium), currency name (Coins), peace mechanic (`/ally`, no separate treaty system), leader
 transfer (admin-only is intended, not a bug), Territory Tiers adopted in principle, Discord server
-itself (exists, staff structure done), WorldEdit (confirmed working in-game).
+itself (exists, staff structure done), WorldEdit (confirmed working in-game), Discord↔game chat
+bridge mechanism (game→Discord via webhook, built and live; Discord→game not planned, see
+docs/DISCORD_BOT.md).
 
 ---
 
