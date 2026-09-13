@@ -32,9 +32,7 @@ this list as new ideas come up instead of letting them scatter again.
   Discord channel. URL lives in `nodisium-data/discord_chat_webhook.txt` on the VM, same
   plain-file/`chmod 600` pattern as the war webhook. The console bridge bot can't do this part —
   chat never touches the game console/log stream (`PlayerChatEvent` goes straight to recipients,
-  no console print), so it was never visible to that bot regardless. The other direction (Discord →
-  game) needs a real bot with gateway access reading the channel, i.e. work in the
-  `nodisium-discord-bot` repo, not started.
+  no console print), so it was never visible to that bot regardless.
 - **Death/kill messages → same Discord webhook** — added in
   [NodesPlayerJoinQuitListener.kt](../modules/nodes/src/main/kotlin/net/aechronis/nodes/listeners/NodesPlayerJoinQuitListener.kt)'s
   `onPlayerDeath`, posts `☠️ **Victim** was slain by **Killer**` (or `died` with no attacker) to the
@@ -59,25 +57,21 @@ this list as new ideas come up instead of letting them scatter again.
 2. **In-game ↔ Discord identity linking** — link a player's Minecraft account to their Discord
    account. Aspirational, not scoped yet (no verification flow, no data model decided).
 
-3. **Discord ↔ in-game chat bridge** — game → Discord half is built (see "Built so far": global
-   chat + death/kill messages mirror via webhook). Discord → game half still needs a bot (webhooks
-   can't receive), not started.
-
-4. **Town-application notification hook** — when a player submits a `/town apply`, ping the town's
+3. **Town-application notification hook** — when a player submits a `/town apply`, ping the town's
    officers in Discord (webhook or bot message) if none are online in-game. Applications currently
    auto-expire after 60 seconds with no notification, which is a bad first impression for new
    players.
 
-5. **Nation pre-approval workflow** — nations are sometimes approved via a Discord conversation
+4. **Nation pre-approval workflow** — nations are sometimes approved via a Discord conversation
    before the team has picked territory or founded a town (`Nation.create` already supports a
    null-town nation for this case). Whether the bot should have a role in this approval step
    (application form, staff-review command, auto-creating the nation record) is undecided.
 
-6. **`/stats <playername>` command** — show a player's stats in Discord. Same stats need to be
+5. **`/stats <playername>` command** — show a player's stats in Discord. Same stats need to be
    shown on the website too, so the data source/API should be shared between the bot and the
    website rather than built twice. Stat fields to show: not decided yet.
 
-7. **Auto-upload `.litematica` files to the VM** — for the paid "paste" feature (player buys a
+6. **Auto-upload `.litematica` files to the VM** — for the paid "paste" feature (player buys a
    build, admin pastes it in via WorldEdit/Litematica): bot takes the uploaded `.litematica` file
    from Discord and pushes it straight to the server's `schematics` folder on the VM
    (`WorldEditConfig.saveDir`, see
