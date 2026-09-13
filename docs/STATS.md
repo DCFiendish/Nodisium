@@ -69,12 +69,23 @@ days a flat 24h repeat would.
   VM — sidesteps the public-exposure blocker from the earlier `StatsApi` (town/nation/war
   overview) discussion entirely. The website's `js/data.js` `API.fetchPlayer`/nation-stats calls
   point at that Pages URL once it's set up.
-- **One-time ops setup, not yet done**: create the public stats repo (e.g.
-  `DCFiendish/nodisium-stats`), clone it somewhere on the VM, enable GitHub Pages on it, and
-  point `dailyStatsGitRepoPath` at that clone (via a plain file the same way the Discord webhook
-  URLs are configured in `NodesLiveModule` — not committed to source, not an env var). Until
-  that's done, `dailyStatsGitRepoPath` stays null and the local file still gets written every
-  night for the bot's use, just not published anywhere public.
+- **One-time ops setup — done**: public repo `DCFiendish/nodisium-stats` created, GitHub Pages
+  enabled (serves `daily-stats.json` at `https://dcfiendish.github.io/nodisium-stats/`), cloned
+  on the VM at `nodisium-data/nodisium-stats-repo` (container-relative), and
+  `dailyStatsGitRepoPath` points at it via the same plain-file config pattern as the Discord
+  webhook URLs in `NodesLiveModule` (`nodisium-data/daily_stats_git_repo_path.txt`).
+  - **Auth is a token, not an SSH deploy key** — an SSH deploy key was tried first but the
+    game server's container image runs as a UID with no matching `/etc/passwd` entry, and
+    OpenSSH's client hard-requires one (`getpwuid()` failure, "No user exists for uid 998") —
+    unrelated to file permissions, a real limitation of that image. Switched to HTTPS with a
+    fine-grained PAT (Contents: Read and write, scoped to just this one repo) instead, via
+    git's `credential.helper = store --file=...` pointed at a token file under
+    `nodisium-data/.deploy_keys/` (container-relative path, since the credential helper's file
+    path is resolved from inside the container, not the host) — sidesteps the passwd lookup
+    entirely since HTTPS git uses libcurl, not OpenSSH.
+  - The local JSON (`dailyStatsOutputPath`) is written regardless of whether the git publish
+    step is configured — the bot's `/playerstats`/`/nationstats` read that file directly and
+    don't depend on GitHub Pages being reachable at all.
 
 ## Relationship to the existing `StatsApi`
 
