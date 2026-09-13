@@ -45,11 +45,16 @@ this list as new ideas come up instead of letting them scatter again.
   (`127.0.0.1:8091/api/stats`, off by default via `NodesConfig.statsApiEnabled`,
   on for the live server via `NodesLiveModule`). The bot's `/nodestats [target]`
   slash command reads it directly (same VM, no network exposure needed) and shows
-  a server-wide overview or one town/nation's detail. No per-player kills/deaths/
-  playtime yet -- nothing server-side tracks that, see feature 5 below. The
-  website's Stats page (`nodisium-website.zip`'s `js/data.js`) still runs on its
-  own mock player data for the same reason -- its `API.fetchPlayer` swap point is
-  ready, but there's no real per-player endpoint to point it at.
+  a server-wide overview or one town/nation's detail.
+- **Per-player/per-nation combat stats + `/playerstats`/`/nationstats`** — kills, deaths,
+  war-flag caps placed/defended, and playtime per player; kills, deaths, nodes
+  captured/lost, and combined playtime per nation. Built and shipped, see
+  [docs/STATS.md](STATS.md) for the full design (tracking hooks, the daily
+  midnight-EST snapshot job, and how it reaches both the bot and the website via
+  GitHub Pages with no new public port on the VM). Feature 5 below is now done,
+  not just partially. The website's Stats page (`DCFiendish/Nodisium-Website`,
+  live at <https://dcfiendish.github.io/Nodisium-Website/>) is wired to the same
+  feed — both player and nation search.
 - Found and fixed along the way: a "testing-only" `Nodes.enableWar()` call in
   `NodesLiveModule.initialize()` was re-enabling war on every `/modules reload nodes`, not just
   first boot — removed. Also found (and spun off, now fixed) a separate pre-existing bug where
@@ -77,10 +82,9 @@ this list as new ideas come up instead of letting them scatter again.
    null-town nation for this case). Whether the bot should have a role in this approval step
    (application form, staff-review command, auto-creating the nation record) is undecided.
 
-5. **`/stats <playername>` command** — show a player's stats in Discord. Partially shipped as
-   `/nodestats` (town/nation/war lookup, see "Built so far"), sharing one API with the website
-   as planned. Still missing: per-player fields (kills, deaths, KD, playtime) -- nothing tracks
-   these server-side yet. That tracking is the remaining prerequisite, not the API/bot wiring.
+5. **`/stats <playername>` command** — show a player's stats in Discord. **Done**, shipped as
+   `/playerstats`/`/nationstats` plus `/nodestats` for town/nation/war lookup (see "Built so
+   far" and [docs/STATS.md](STATS.md)), sharing one feed with the website as planned.
 
 6. **Auto-upload `.litematica` files to the VM** — for the paid "paste" feature (player buys a
    build, admin pastes it in via WorldEdit/Litematica): bot takes the uploaded `.litematica` file

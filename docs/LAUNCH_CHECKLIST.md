@@ -100,9 +100,13 @@ roster changes, unrelated to this list).
 - Basic data-handling/GDPR-adjacent pass (what's stored, for how long, deletion-request feasibility)
   — not done.
 - Domain — server name is confirmed **Nodisium**; domain will be bought later, off that name.
-- **Website** — not started: rules page, a better territory-viewer map (the current `nodes-map` fork
-  of Aechronis's is "not satisfactory" per the user), payment method integration, and presumably
-  wherever the Coins shop lives.
+- **Website** — live (free, temporary) at <https://dcfiendish.github.io/Nodisium-Website/>
+  (`DCFiendish/Nodisium-Website`, GitHub Pages). Has: rules page, guides, shop UI (client-side
+  basket only, no real payments), and a real Stats page (player + nation search, backed by the
+  daily stats feed — see [STATS.md](STATS.md)). Still missing: a better territory-viewer map
+  (the current `nodes-map` fork of Aechronis's is "not satisfactory" per the user — the Map page
+  is still a placeholder box), payment method integration, permanent hosting/domain (the Pages
+  URL above isn't the final home), and wherever the Coins shop actually lives once payments work.
 - Real load test at target scale — the `rust-mc-bot` 50→100→150 bot ladder has never been run
   against the current (right-sized) VM; `RESEARCH.md` §7's ~16GB/3-OCPU figure is still an unverified
   estimate. **Directly gates the 20 TPS commitment above** — this is the actual evidence for whether
