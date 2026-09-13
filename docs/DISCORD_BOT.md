@@ -1,6 +1,7 @@
 # Discord Bot — Planned Features
 
-Status: v1 built and live (console bridge + war start/end webhook, see "Built so far" below). This
+Status: v1 built and live (console bridge + war start/end webhook + global chat and death/kill
+webhook, see "Built so far" below). This
 doc exists to stop these ideas from living only in chat history / memory files, scattered across
 `LAUNCH_CHECKLIST.md`, `RESEARCH.md`, and `research-todo/07-community-and-onboarding.md`. Add to
 this list as new ideas come up instead of letting them scatter again.
@@ -34,6 +35,13 @@ this list as new ideas come up instead of letting them scatter again.
   no console print), so it was never visible to that bot regardless. The other direction (Discord →
   game) needs a real bot with gateway access reading the channel, i.e. work in the
   `nodisium-discord-bot` repo, not started.
+- **Death/kill messages → same Discord webhook** — added in
+  [NodesPlayerJoinQuitListener.kt](../modules/nodes/src/main/kotlin/net/aechronis/nodes/listeners/NodesPlayerJoinQuitListener.kt)'s
+  `onPlayerDeath`, posts `☠️ **Victim** was slain by **Killer**` (or `died` with no attacker) to the
+  same `discordChatWebhookUrl` channel as global chat. Built independently of the game's own death
+  message component (`event.chatMessage`) — that's a `TranslatableComponent` only the vanilla
+  client can resolve to real text via its own lang file, nothing server-side to serialize for
+  Discord — so killer name/entity type is pulled straight off `lastDamageSource` instead.
 - Found and fixed along the way: a "testing-only" `Nodes.enableWar()` call in
   `NodesLiveModule.initialize()` was re-enabling war on every `/modules reload nodes`, not just
   first boot — removed. Also found (and spun off, now fixed) a separate pre-existing bug where
@@ -52,8 +60,8 @@ this list as new ideas come up instead of letting them scatter again.
    account. Aspirational, not scoped yet (no verification flow, no data model decided).
 
 3. **Discord ↔ in-game chat bridge** — game → Discord half is built (see "Built so far": global
-   chat mirrors via webhook). Discord → game half still needs a bot (webhooks can't receive),
-   not started.
+   chat + death/kill messages mirror via webhook). Discord → game half still needs a bot (webhooks
+   can't receive), not started.
 
 4. **Town-application notification hook** — when a player submits a `/town apply`, ping the town's
    officers in Discord (webhook or bot message) if none are online in-game. Applications currently
