@@ -222,9 +222,11 @@ object Nodes {
         SaveManager.stop()
         IncomeManager.stop()
         Nametag.stop()
+        StatsApi.stop()
         SaveManager.start(config.savePeriod)
         IncomeManager.start()
         Nametag.start(config.nametagUpdatePeriod)
+        if (config.statsApiEnabled) StatsApi.start(config.statsApiPort, config.statsApiSnapshotPeriod)
     }
 
     internal fun initializeOnlinePlayers() {
@@ -272,6 +274,7 @@ object Nodes {
             SaveManager.stop()
             IncomeManager.stop()
             Nametag.stop()
+            StatsApi.stop()
             MiningBoostManager.stop()
         }
         cleanupStage(CleanupStage.RESIDENTS) {

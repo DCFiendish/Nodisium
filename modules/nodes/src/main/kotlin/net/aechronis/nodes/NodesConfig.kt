@@ -223,6 +223,20 @@ data class NodesConfig(
     // default allowed groups for each town permission
     val defaultTownPermissions: Map<TownPermissions, Set<PermissionsGroup>> =
         enumValues<TownPermissions>().associateWith { setOf(PermissionsGroup.TOWN) },
+
+    // ===================================
+    // stats API
+    // ===================================
+    // Read-only HTTP endpoint (town/nation/war data) for the Discord bot and, later, the website.
+    // Off by default so test/local runs never bind a socket unless a live deploy opts in.
+    val statsApiEnabled: Boolean = false,
+
+    // Loopback-only -- see docs/DISCORD_BOT.md open questions. Not for direct public exposure.
+    val statsApiPort: Int = 8091,
+
+    // How often the snapshot served by the API is refreshed. Data is this stale at worst;
+    // fine for a stats page/command, not meant for live combat numbers.
+    val statsApiSnapshotPeriod: Long = 10800000, // 3 hours
 ) {
     // folder for backups of json state files
     val pathBackup: Path get() = Paths.get(path, "backup").normalize()

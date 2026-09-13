@@ -876,6 +876,26 @@ class NodesTest {
         }
     }
 
+    @Test
+    fun `stats API serves a snapshot with the loaded town and nation data`() {
+        val port = 18093
+        StatsApi.start(port, snapshotPeriod = 999_999_999L)
+        try {
+            val client = java.net.http.HttpClient.newHttpClient()
+            val request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:$port/api/stats")).build()
+            val response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+
+            assertEquals(200, response.statusCode())
+            val json = com.google.gson.JsonParser.parseString(response.body()).asJsonObject
+            assertTrue(json.has("war"))
+            val towns = json.getAsJsonArray("towns")
+            assertTrue(towns.size() > 0, "Snapshot should include the loaded towns")
+            assertTrue(towns.any { it.asJsonObject.get("name").asString == "London" })
+        } finally {
+            StatsApi.stop()
+        }
+    }
+
     @AfterAll
     fun tearDown() {
         // if -DkeepRunning=true is set keep server running for manual testing

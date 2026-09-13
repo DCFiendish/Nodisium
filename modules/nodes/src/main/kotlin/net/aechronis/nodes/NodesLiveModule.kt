@@ -32,6 +32,7 @@ class NodesLiveModule : HotSwappableModule {
                 adminUsernames = setOf("DCFiendish"),
                 discordWarWebhookUrl = readWebhookUrl("discord_war_webhook.txt"),
                 discordChatWebhookUrl = readWebhookUrl("discord_chat_webhook.txt"),
+                statsApiEnabled = true,
             ),
         )
         TestWeapons.register()
