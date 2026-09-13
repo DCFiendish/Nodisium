@@ -30,20 +30,18 @@ class NodesLiveModule : HotSwappableModule {
                 canInteractInEmpty = false,
                 canInteractInUnclaimed = false,
                 adminUsernames = setOf("DCFiendish"),
-                discordWarWebhookUrl = readDiscordWarWebhookUrl(),
+                discordWarWebhookUrl = readWebhookUrl("discord_war_webhook.txt"),
+                discordChatWebhookUrl = readWebhookUrl("discord_chat_webhook.txt"),
             ),
         )
         TestWeapons.register()
         PvpKit.init()
         testCommands.forEach(MinecraftServer.getCommandManager()::register)
-        // Testing-only: enable war at boot so bot swarms don't need a human to run
-        // /nodesadmin war enable first. Remove alongside LoadTestBots once real players take over.
-        Nodes.enableWar()
     }
 
     // Plain file, not an env var -- see the field doc on NodesConfig.discordWarWebhookUrl.
-    private fun readDiscordWarWebhookUrl(): String? =
-        runCatching { Files.readString(Paths.get("nodisium-data/discord_war_webhook.txt")).trim() }
+    private fun readWebhookUrl(fileName: String): String? =
+        runCatching { Files.readString(Paths.get("nodisium-data/$fileName")).trim() }
             .getOrNull()
             ?.takeIf { it.isNotBlank() }
 

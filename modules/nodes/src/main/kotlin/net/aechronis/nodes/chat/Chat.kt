@@ -4,7 +4,9 @@
 
 package net.aechronis.nodes.chat
 
+import net.aechronis.nodes.DiscordWebhook
 import net.aechronis.nodes.Message
+import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.constants.DiplomaticRelationship
 import net.aechronis.nodes.objects.Resident
 import net.aechronis.nodes.utils.ChatColor
@@ -58,6 +60,8 @@ object Chat {
                 // filter out players who muted global
                 event.recipients.removeAll(playersMuteGlobal)
                 event.formattedMessage = formatMsgGlobal(resident, player.username, msg)
+                // Discord bridge is global-only -- town/nation/ally chat stays in-game.
+                DiscordWebhook.send(Nodes.config.discordChatWebhookUrl, "**${player.username}**: ${event.rawMessage}")
             }
 
             ChatMode.TOWN -> {

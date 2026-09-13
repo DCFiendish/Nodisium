@@ -175,6 +175,12 @@ data class NodesConfig(
     // NodesLiveModule) so the URL is never committed to source either way.
     val discordWarWebhookUrl: String? = null,
 
+    // Discord webhook URL for mirroring global chat to Discord. Null = disabled. Same
+    // plain-file reasoning as discordWarWebhookUrl above (nodisium-data/discord_chat_webhook.txt).
+    // Global chat only -- town/nation/ally chat is intentionally private and must not leak here.
+    // One-way (game -> Discord); Discord -> game requires the separate bot repo, not this one.
+    val discordChatWebhookUrl: String? = null,
+
     // usernames that bypass all break/place permission checks. Empty by default --
     // must be explicitly configured per-deploy, never on for the default player.
     val adminUsernames: Set<String> = emptySet(),
