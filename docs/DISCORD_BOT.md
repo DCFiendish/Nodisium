@@ -23,6 +23,17 @@ this list as new ideas come up instead of letting them scatter again.
   The webhook URL lives in `nodisium-data/discord_war_webhook.txt` on the VM (`chmod 600`), not in
   source or an env var — this server's Pterodactyl egg has no such startup variable and adding one
   needs panel admin access. `/nodesadmin war skirmish` does not post (not asked for yet).
+- **Global chat → Discord webhook** — one-way only, game chat to Discord. Every message sent in
+  global chat mode posts to Discord via a plain webhook, added in
+  [Chat.kt](../modules/nodes/src/main/kotlin/net/aechronis/nodes/chat/Chat.kt) (reuses
+  `DiscordWebhook.kt`, config field `discordChatWebhookUrl`). Town/nation/ally chat is intentionally
+  excluded — those are private and mirroring them would leak faction chat to whoever's in the
+  Discord channel. URL lives in `nodisium-data/discord_chat_webhook.txt` on the VM, same
+  plain-file/`chmod 600` pattern as the war webhook. The console bridge bot can't do this part —
+  chat never touches the game console/log stream (`PlayerChatEvent` goes straight to recipients,
+  no console print), so it was never visible to that bot regardless. The other direction (Discord →
+  game) needs a real bot with gateway access reading the channel, i.e. work in the
+  `nodisium-discord-bot` repo, not started.
 - Found and fixed along the way: a "testing-only" `Nodes.enableWar()` call in
   `NodesLiveModule.initialize()` was re-enabling war on every `/modules reload nodes`, not just
   first boot — removed. Also found (and spun off, now fixed) a separate pre-existing bug where
@@ -40,8 +51,9 @@ this list as new ideas come up instead of letting them scatter again.
 2. **In-game ↔ Discord identity linking** — link a player's Minecraft account to their Discord
    account. Aspirational, not scoped yet (no verification flow, no data model decided).
 
-3. **Discord ↔ in-game chat bridge** — mirror chat between a Discord channel and in-game chat.
-   Undecided: self-hosted bot vs. Discord webhooks.
+3. **Discord ↔ in-game chat bridge** — game → Discord half is built (see "Built so far": global
+   chat mirrors via webhook). Discord → game half still needs a bot (webhooks can't receive),
+   not started.
 
 4. **Town-application notification hook** — when a player submits a `/town apply`, ping the town's
    officers in Discord (webhook or bot message) if none are online in-game. Applications currently
