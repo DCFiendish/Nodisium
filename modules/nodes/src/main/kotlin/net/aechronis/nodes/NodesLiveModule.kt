@@ -32,7 +32,6 @@ class NodesLiveModule : HotSwappableModule {
                 adminUsernames = setOf("DCFiendish"),
                 discordWarWebhookUrl = readPlainConfigFile("discord_war_webhook.txt"),
                 discordChatWebhookUrl = readPlainConfigFile("discord_chat_webhook.txt"),
-                statsApiEnabled = true,
                 dailyStatsEnabled = true,
                 // Null (git publish skipped, local file still written) until the repo/deploy
                 // key are set up on the VM -- see docs/STATS.md. Same plain-file pattern as

@@ -223,12 +223,10 @@ object Nodes {
         SaveManager.stop()
         IncomeManager.stop()
         Nametag.stop()
-        StatsApi.stop()
         DailyStatsSnapshot.stop()
         SaveManager.start(config.savePeriod)
         IncomeManager.start()
         Nametag.start(config.nametagUpdatePeriod)
-        if (config.statsApiEnabled) StatsApi.start(config.statsApiPort, config.statsApiSnapshotPeriod)
         if (config.dailyStatsEnabled) DailyStatsSnapshot.start(config.dailyStatsOutputPath, config.dailyStatsGitRepoPath)
     }
 
@@ -277,7 +275,6 @@ object Nodes {
             SaveManager.stop()
             IncomeManager.stop()
             Nametag.stop()
-            StatsApi.stop()
             DailyStatsSnapshot.stop()
             MiningBoostManager.stop()
         }

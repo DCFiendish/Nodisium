@@ -57,10 +57,9 @@ days a flat 24h repeat would.
 
 ## How the data reaches consumers
 
-- **Discord bot**: reads the JSON file directly off local disk (`NodesConfig.dailyStatsOutputPath`,
-  default `nodisium-data/stats/daily-stats.json`) — the bot already runs on the same VM as the
-  game server (see `nodisium-discord-bot`'s README), so this needs no network hop and no new
-  exposure.
+- **Discord bot**: does not surface stats — `/nodestats`/`/playerstats`/`/nationstats` were built
+  then removed (2026-09-13), see [docs/DISCORD_BOT.md](DISCORD_BOT.md). The website below is the
+  only consumer now.
 - **Website**: has no backend of its own (a plain static site — see the `DCFiendish/Nodisium-Website`
   repo, renamed from `nodisium-website` by GitHub along the way), so it can't read the VM's
   local disk. Instead, `DailyStatsSnapshot` optionally (`NodesConfig.dailyStatsGitRepoPath`,
@@ -84,36 +83,26 @@ days a flat 24h repeat would.
     path is resolved from inside the container, not the host) — sidesteps the passwd lookup
     entirely since HTTPS git uses libcurl, not OpenSSH.
   - The local JSON (`dailyStatsOutputPath`) is written regardless of whether the git publish
-    step is configured — the bot's `/playerstats`/`/nationstats` read that file directly and
-    don't depend on GitHub Pages being reachable at all.
+    step is configured.
 
 ## Current status (as of 2026-09-13)
 
-- Server-side tracking, the daily snapshot job, `/nodestats`, `/playerstats`, `/nationstats`,
-  and the GitHub Pages publish pipeline are all deployed and live. Verified end-to-end with a
-  manual test push before wiring in the real config (see the ops-setup note above).
+- Server-side tracking, the daily snapshot job, and the GitHub Pages publish pipeline are
+  deployed and live. Verified end-to-end with a manual test push before wiring in the real
+  config (see the ops-setup note above).
 - **No real snapshot has run yet** — the job fires at the next midnight America/New_York after
   deploy. Until then, `https://dcfiendish.github.io/nodisium-stats/daily-stats.json` 404s and
-  both the bot's and website's stats commands correctly report "not found"/"stats API
-  unavailable" rather than crashing. This is expected, not a bug — recheck after the first
-  midnight run.
+  the website's stats page correctly reports "not found" rather than crashing. This is
+  expected, not a bug — recheck after the first midnight run.
 - The website (`DCFiendish/Nodisium-Website`) was flipped from private to public and GitHub
   Pages enabled on it too, specifically so there'd be something to click and see:
   **https://dcfiendish.github.io/Nodisium-Website/** — live now, Stats page included (both
   player and nation search, tested in-browser against the not-yet-populated feed above).
   Note the capitalization in the URL/repo name — GitHub renamed `nodisium-website` to
   `Nodisium-Website` at some point and Pages URLs are case-sensitive to that.
-- Not yet verified: whether the `discordbot` system user on the VM can actually read
-  `nodisium-data/stats/daily-stats.json` once it exists — it's written by the game server's
-  container process (a different uid). Flagged in `nodisium-discord-bot`'s README; check
-  `/playerstats`/`/nationstats` in Discord after the first midnight run and fix the file's
-  group/permissions if they error out.
 - Domain/payment/permanent hosting for the website are still open (same items as before this
   feature) — the GitHub Pages URL above is a real, live, free stand-in, not the final home.
-
-## Relationship to the existing `StatsApi`
-
-`StatsApi` (loopback HTTP, `/api/stats`, refreshed every few hours) is a **separate, untouched**
-artifact — a live town/nation/war overview for the bot's `/nodestats` command. This daily
-snapshot is deeper per-player/per-nation leaderboard data that's expensive enough to build
-(a full walk of every resident) that it's deliberately not something either consumer polls live.
+- **Removed (2026-09-13)**: the Discord bot's `/nodestats`, `/playerstats`, `/nationstats`
+  commands and the server-side `StatsApi` HTTP endpoint (`/api/stats`, town/nation/war overview)
+  that backed `/nodestats`. Stats are website-only now — see
+  [docs/DISCORD_BOT.md](DISCORD_BOT.md).

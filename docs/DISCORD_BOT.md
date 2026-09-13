@@ -40,21 +40,16 @@ this list as new ideas come up instead of letting them scatter again.
   message component (`event.chatMessage`) — that's a `TranslatableComponent` only the vanilla
   client can resolve to real text via its own lang file, nothing server-side to serialize for
   Discord — so killer name/entity type is pulled straight off `lastDamageSource` instead.
-- **Read-only stats API + `/nodestats` bot command** — `net.aechronis.nodes.StatsApi`
-  serves a snapshot (town/nation/war data, refreshed every 3h) over loopback HTTP
-  (`127.0.0.1:8091/api/stats`, off by default via `NodesConfig.statsApiEnabled`,
-  on for the live server via `NodesLiveModule`). The bot's `/nodestats [target]`
-  slash command reads it directly (same VM, no network exposure needed) and shows
-  a server-wide overview or one town/nation's detail.
-- **Per-player/per-nation combat stats + `/playerstats`/`/nationstats`** — kills, deaths,
-  war-flag caps placed/defended, and playtime per player; kills, deaths, nodes
-  captured/lost, and combined playtime per nation. Built and shipped, see
-  [docs/STATS.md](STATS.md) for the full design (tracking hooks, the daily
-  midnight-EST snapshot job, and how it reaches both the bot and the website via
-  GitHub Pages with no new public port on the VM). Feature 5 below is now done,
-  not just partially. The website's Stats page (`DCFiendish/Nodisium-Website`,
-  live at <https://dcfiendish.github.io/Nodisium-Website/>) is wired to the same
-  feed — both player and nation search.
+- **Per-player/per-nation combat stats** — kills, deaths, war-flag caps placed/defended,
+  and playtime per player; kills, deaths, nodes captured/lost, and combined playtime
+  per nation. See [docs/STATS.md](STATS.md) for the full design (tracking hooks, the
+  daily midnight-EST snapshot job, and how it reaches the website via GitHub Pages
+  with no new public port on the VM). The bot itself does not surface this data —
+  the `/nodestats`, `/playerstats`, and `/nationstats` commands and the server-side
+  `StatsApi` HTTP endpoint that backed `/nodestats` were built, then removed
+  (2026-09-13) in favor of leaving stats to the website's Stats page
+  (`DCFiendish/Nodisium-Website`, live at
+  <https://dcfiendish.github.io/Nodisium-Website/>), which is wired to the same feed.
 - Found and fixed along the way: a "testing-only" `Nodes.enableWar()` call in
   `NodesLiveModule.initialize()` was re-enabling war on every `/modules reload nodes`, not just
   first boot — removed. Also found (and spun off, now fixed) a separate pre-existing bug where
@@ -82,9 +77,9 @@ this list as new ideas come up instead of letting them scatter again.
    null-town nation for this case). Whether the bot should have a role in this approval step
    (application form, staff-review command, auto-creating the nation record) is undecided.
 
-5. **`/stats <playername>` command** — show a player's stats in Discord. **Done**, shipped as
-   `/playerstats`/`/nationstats` plus `/nodestats` for town/nation/war lookup (see "Built so
-   far" and [docs/STATS.md](STATS.md)), sharing one feed with the website as planned.
+5. **`/stats <playername>` command** — show a player's stats in Discord. Built (`/playerstats`,
+   `/nationstats`, `/nodestats`), then deliberately removed (2026-09-13) — stats live on the
+   website only now (see [docs/STATS.md](STATS.md)). Not planned to come back.
 
 6. **Auto-upload `.litematica` files to the VM** — for the paid "paste" feature (player buys a
    build, admin pastes it in via WorldEdit/Litematica): bot takes the uploaded `.litematica` file

@@ -3,10 +3,8 @@
  *
  * Runs once a day at midnight America/New_York (deliberately the server's lowest-population
  * window, chosen to keep this off the critical path during 200-player Nodes-war peaks) and
- * writes one JSON file the Discord bot and website both read. The live StatsApi endpoint
- * (town/nation/war overview, refreshed every few hours) is a separate, untouched artifact --
- * this is the deeper per-player/per-nation leaderboard data, which needs a full walk of every
- * resident/nation and is intentionally not something either consumer polls live.
+ * writes one JSON file the website reads, which needs a full walk of every resident/nation and
+ * is intentionally not something the consumer polls live.
  */
 
 package net.aechronis.nodes.tasks
