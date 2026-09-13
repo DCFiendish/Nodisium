@@ -110,6 +110,7 @@ class Nation(
                 null
             }
             val nation = Nation(uuid, name, capital)
+            Nodes.nations[name] = nation
             if (capital != null) Town.initializeCapitalLives(capital)
             if (color != null) nation.color = color
             for (townName in towns) {
