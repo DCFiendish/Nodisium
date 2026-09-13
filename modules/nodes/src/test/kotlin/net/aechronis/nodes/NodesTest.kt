@@ -8,6 +8,8 @@ import net.aechronis.nodes.objects.MiningBoostManager
 import net.aechronis.nodes.objects.Nation
 import net.aechronis.nodes.objects.OreDeposit
 import net.aechronis.nodes.objects.OreSampler
+import net.aechronis.nodes.objects.Y_WORLD_MAX
+import net.aechronis.nodes.objects.Y_WORLD_MIN
 import net.aechronis.nodes.objects.Plot
 import net.aechronis.nodes.objects.Resident
 import net.aechronis.nodes.objects.Territory
@@ -454,8 +456,8 @@ class NodesTest {
     @Test
     fun `ore sampler returns nothing outside the world height bounds`() {
         val sampler = OreSampler(arrayListOf(OreDeposit(Material.DIAMOND, 1.0, 1, 1)))
-        assertTrue(sampler.sample(-1).isEmpty(), "y below world min should return no drops")
-        assertTrue(sampler.sample(256).isEmpty(), "y above world max should return no drops")
+        assertTrue(sampler.sample(Y_WORLD_MIN - 1).isEmpty(), "y below world min should return no drops")
+        assertTrue(sampler.sample(Y_WORLD_MAX + 1).isEmpty(), "y above world max should return no drops")
     }
 
     @Test
