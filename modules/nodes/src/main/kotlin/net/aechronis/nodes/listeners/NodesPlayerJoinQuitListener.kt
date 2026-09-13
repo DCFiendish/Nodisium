@@ -6,6 +6,7 @@
 
 package net.aechronis.nodes.listeners
 
+import net.aechronis.nodes.DiscordWebhook
 import net.aechronis.nodes.Message
 import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.chat.Chat
@@ -73,6 +74,18 @@ object NodesPlayerJoinQuitListener {
             position.blockZ(),
         )
         Message.print(player, "Death waypoint set at ${position.blockX()}, ${position.blockY()}, ${position.blockZ()}")
+
+        // Built independently of event.chatMessage -- that TranslatableComponent only resolves to
+        // real text client-side (via the vanilla client's own lang file), so there's nothing to
+        // serialize to plain text for Discord here.
+        val attacker = player.lastDamageSource?.attacker
+        val deathLine = if (attacker != null && attacker.uuid != player.uuid) {
+            val killerName = (attacker as? Player)?.username ?: attacker.entityType.key().asString().substringAfter(':')
+            "☠️ **${player.username}** was slain by **$killerName**"
+        } else {
+            "☠️ **${player.username}** died"
+        }
+        DiscordWebhook.send(Nodes.config.discordChatWebhookUrl, deathLine)
     }
 
     fun onPlayerQuit(event: PlayerDisconnectEvent) {
