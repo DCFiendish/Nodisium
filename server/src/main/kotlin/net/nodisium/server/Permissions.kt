@@ -45,7 +45,7 @@ object Permissions {
     fun init() {
         LuckPermsMinestom
             .builder(Path.of("nodisium-data/luckperms"))
-            .permissionSuggestions(defaultNodes + modNodes + setOf("nodes.admin", "nodisium.testgun", "vanilla.setwarp", "vanilla.convert", "*"))
+            .permissionSuggestions(defaultNodes + modNodes + setOf("nodes.admin", "nodisium.testgun", "vanilla.setwarp", "*"))
             .commandRegistry(CommandRegistry.minestom())
             .enable()
 

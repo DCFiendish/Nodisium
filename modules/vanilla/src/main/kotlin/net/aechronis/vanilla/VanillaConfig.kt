@@ -19,7 +19,6 @@ data class VanillaConfig(
     val saplingsEnabled: Boolean = true,
     val elevatorEnabled: Boolean = true,
     val mannequinEnabled: Boolean = true,
-    val blocksEnabled: Boolean = true,
     val treeFellerEnabled: Boolean = true,
     val foodEnabled: Boolean = true,
     val itemsEnabled: Boolean = true,

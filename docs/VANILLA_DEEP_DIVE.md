@@ -25,11 +25,11 @@ Same methodology and depth as [NODES_DEEP_DIVE.md](NODES_DEEP_DIVE.md) and [COMB
 > left as-is -- they're accepted trade-offs at current scale, not bugs.
 >
 > **Fifth pass, 2026-09-12 (same day) — remaining files, no new bugs found.** Read every file not
-> already covered by Parts 1-4: every command class (`Give`/`Craft`/`Convert`/`Clear`/`EnderChest`/
+> already covered by Parts 1-4: every command class (`Give`/`Craft`/`Clear`/`EnderChest`/
 > `Teleport`/`InventorySee`/`Kill`/`GameMode`/`Gm`/`Ignore`/`Back`/`Fly`/`Whitelist`/`KothCommand`/
 > `SetWarpCommand`/`WarpCommand`/`Message`/`Reply`/`List`/`Broadcast`/`Vote`/`Music`), every
 > remaining listener (`WhitelistListener`/`FoodListener`/`CropsPlantListener`/`SaplingsListener`/
-> `ItemListener`/`RecipesListener`/`BlocksListener`/`MannequinListener`/`TreeFellerListener`), the
+> `ItemListener`/`RecipesListener`/`MannequinListener`/`TreeFellerListener`), the
 > crafting-match objects (`RecipesWorkspace`/`Shaped`/`RecipesShapeless`), `TreeFeller`/`Items`, and
 > `Vanilla.kt`'s own init/shutdown orchestration plus `VanillaLiveModule.kt`. No new correctness or
 > lag bugs found -- the command-surface gaps found are all already-tracked LOW items from Part 2
@@ -48,6 +48,14 @@ Same methodology and depth as [NODES_DEEP_DIVE.md](NODES_DEEP_DIVE.md) and [COMB
 > is only reachable via the old classloader, which is `.close()`d right after `shutdown()`. So this
 > is **not a bug**: the per-generation-classloader design is exactly what prevents the static-state
 > reuse problem that would otherwise exist. No action needed.
+>
+> **Sixth pass, 2026-09-12 (same day) — `/convert` removed entirely, not patched.** `commands/Convert.kt`,
+> `managers/Blocks.kt`, `listeners/BlocksListener.kt`, `objects/BlockType.kt`, and
+> `objects/StonecutterConversionRecipe.kt` are all deleted, along with `blocksEnabled` and the unused
+> `blocksStoneType`/`blocksWoodType`/`blocksGrassType` config fields and the `vanilla.convert`
+> permission node. Every `Blocks.stonecutters`/`Blocks.kt` reference above describes now-deleted code,
+> kept as history. The unrelated `LadderPlacementRule` bug fix that lived inside `Blocks.init()`
+> moved to `LadderFix.init()` and is now called unconditionally from `Vanilla.init()`.
 
 ### HIGH
 

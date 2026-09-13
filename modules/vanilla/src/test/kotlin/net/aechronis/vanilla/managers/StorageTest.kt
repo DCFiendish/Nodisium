@@ -189,7 +189,7 @@ class StorageTest : ManagerTest() {
 
     @Test
     fun `stations consume normal block placement for both hands`() {
-        val stations = listOf(Block.BARREL, Block.STONECUTTER, Block.CRAFTING_TABLE)
+        val stations = listOf(Block.BARREL, Block.CRAFTING_TABLE)
         for ((index, station) in stations.withIndex()) {
             assertStationInteraction(station, BlockVec(30 + index * 4, 40, 30), PlayerHand.MAIN, false, false)
             assertStationInteraction(station, BlockVec(30 + index * 4, 40, 34), PlayerHand.OFF, false, false)
@@ -198,7 +198,7 @@ class StorageTest : ManagerTest() {
 
     @Test
     fun `sneaking with an item places against stations`() {
-        val stations = listOf(Block.BARREL, Block.STONECUTTER, Block.CRAFTING_TABLE)
+        val stations = listOf(Block.BARREL, Block.CRAFTING_TABLE)
         for ((index, station) in stations.withIndex()) {
             assertStationInteraction(station, BlockVec(50 + index * 4, 40, 30), PlayerHand.MAIN, true, true)
         }

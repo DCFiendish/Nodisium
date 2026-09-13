@@ -96,12 +96,6 @@ private val IronPickaxeBlocks =
     }
 
 data class BlocksConfig(
-    val blocksStoneType: List<Material> =
-        listOf(),
-    val blocksGrassType: List<Material> =
-        listOf(),
-    val blocksWoodType: List<Material> =
-        listOf(),
     val blockDrops: Map<Material, List<ItemStack>> =
         mapOf(
             Material.STONE to listOf(ItemStack.of(Material.COBBLESTONE)),

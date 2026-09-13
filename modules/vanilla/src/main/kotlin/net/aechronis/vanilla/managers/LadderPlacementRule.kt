@@ -1,5 +1,6 @@
 package net.aechronis.vanilla.managers
 
+import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Point
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockFace
@@ -7,6 +8,15 @@ import net.minestom.server.instance.block.rule.BlockPlacementRule
 import net.minestom.server.utils.Direction
 import kotlin.math.cos
 import kotlin.math.sin
+
+object LadderFix {
+    fun init() {
+        val blockManager = MinecraftServer.getBlockManager()
+        val existing = blockManager.getBlockPlacementRule(Block.LADDER)
+        if (existing is LadderPlacementRule) return
+        blockManager.registerBlockPlacementRule(LadderPlacementRule(Block.LADDER, existing))
+    }
+}
 
 /**
  * Minestom ships no default placement rule for LADDER (see BlockManager -- the registry starts

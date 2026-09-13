@@ -3,7 +3,6 @@ package net.aechronis.vanilla
 import net.aechronis.vanilla.commands.Back
 import net.aechronis.vanilla.commands.Broadcast
 import net.aechronis.vanilla.commands.Clear
-import net.aechronis.vanilla.commands.Convert
 import net.aechronis.vanilla.commands.Craft
 import net.aechronis.vanilla.commands.EnderChest
 import net.aechronis.vanilla.commands.Fly
@@ -31,7 +30,6 @@ import net.aechronis.vanilla.listeners.FallDamageListener
 import net.aechronis.vanilla.listeners.MovementAntiCheatListener
 import net.aechronis.vanilla.listeners.PlayerBreakListener
 import net.aechronis.vanilla.listeners.ServerLinksListener
-import net.aechronis.vanilla.managers.Blocks
 import net.aechronis.vanilla.managers.Bundles
 import net.aechronis.vanilla.managers.Combat
 import net.aechronis.vanilla.managers.Crops
@@ -42,6 +40,7 @@ import net.aechronis.vanilla.managers.Food
 import net.aechronis.vanilla.managers.ItemFrames
 import net.aechronis.vanilla.managers.Items
 import net.aechronis.vanilla.managers.Koth
+import net.aechronis.vanilla.managers.LadderFix
 import net.aechronis.vanilla.managers.Mannequin
 import net.aechronis.vanilla.managers.PlayerData
 import net.aechronis.vanilla.managers.PvpPrep
@@ -98,7 +97,6 @@ object Vanilla {
                     List(),
                 )
             if (config.musicEnabled) commands += Music()
-            if (config.blocksEnabled) commands += Convert()
             if (config.recipesEnabled) commands += Craft()
             if (config.whitelistEnabled) commands += Whitelist()
             if (config.kothEnabled) commands += KothCommand()
@@ -121,7 +119,7 @@ object Vanilla {
         if (config.saplingsEnabled) Saplings.init()
         if (config.elevatorEnabled) Elevator.init()
         if (config.mannequinEnabled) Mannequin.init()
-        if (config.blocksEnabled) Blocks.init()
+        LadderFix.init()
         if (config.treeFellerEnabled) TreeFeller.init()
         if (config.foodEnabled) Food.init()
         if (config.itemsEnabled) Items.init()
