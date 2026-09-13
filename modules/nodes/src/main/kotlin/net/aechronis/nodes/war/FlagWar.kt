@@ -489,6 +489,11 @@ object FlagWar {
                 // mark that save required
                 needsSave = true
 
+                // combat stats -- see docs/STATS.md. Only here, not inside createAttack() --
+                // that function is also called from loadAttack() to resume a persisted
+                // in-progress attack on world load, which must not double-count as a new cap.
+                Resident.fromUuid(attacker)?.let { Resident.addCapPlaced(it) }
+
                 return Result.success(attack)
             }
         } else {
@@ -541,6 +546,14 @@ object FlagWar {
         WarSerializer.save(true)
         return outcome
     }
+
+    // Pure predicate, pulled out of cancelAttack() so the "does this flag-break count as a
+    // defended stat" rule is testable without a live Attack/Player. False for every
+    // non-player-triggered cancellation (brokenByUuid null) and for an attacker breaking
+    // their own flag (brokenByUuid == attackerUuid) -- only a different real player's break
+    // credits the defender. See docs/STATS.md.
+    internal fun isDefendedBreak(attackerUuid: UUID, brokenByUuid: UUID?): Boolean =
+        brokenByUuid != null && brokenByUuid != attackerUuid
 
     // Pure attack-time formula, pulled out of createAttack() so it's testable without a live
     // Minestom instance/Territory/Town graph. chunkAttackTimeMs is converted to ticks (20/1000)
@@ -1020,8 +1033,16 @@ object FlagWar {
     // cleanup attack instance, then dispatch signal
     // that attack cancelled (was defended)
     // (runs on main thread)
-    // TODO: signal event that chunk defended (broadcast message)
-    internal fun cancelAttack(attack: Attack) {
+    // brokenBy: the player who broke the attacker's flag, if that's why this attack is being
+    // cancelled -- null for every other cancellation path (war disable/cleanup, warzone
+    // transitions, the attacking town being destroyed, the attacker quitting their own
+    // attack). Only a real, different player's flag-break counts as a defended stat; see
+    // docs/STATS.md and the guard in NodesWorldListener.onBlockBreak's caller.
+    internal fun cancelAttack(attack: Attack, brokenBy: Player? = null) {
+        if (isDefendedBreak(attack.attacker, brokenBy?.uuid)) {
+            Resident.fromPlayer(brokenBy!!)?.let { Resident.addAttackDefended(it) }
+        }
+
         // remove status from territory chunk
         val chunk = TerritoryChunk.fromCoord(attack.coord)
         chunk?.attacker = null

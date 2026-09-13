@@ -48,6 +48,7 @@ import net.aechronis.nodes.objects.TerritoryResources
 import net.aechronis.nodes.objects.Town
 import net.aechronis.nodes.objects.WaypointMenu
 import net.aechronis.nodes.serdes.Deserializer
+import net.aechronis.nodes.tasks.DailyStatsSnapshot
 import net.aechronis.nodes.tasks.IncomeManager
 import net.aechronis.nodes.tasks.SaveManager
 import net.aechronis.nodes.tasks.SerialSaveQueue
@@ -223,10 +224,12 @@ object Nodes {
         IncomeManager.stop()
         Nametag.stop()
         StatsApi.stop()
+        DailyStatsSnapshot.stop()
         SaveManager.start(config.savePeriod)
         IncomeManager.start()
         Nametag.start(config.nametagUpdatePeriod)
         if (config.statsApiEnabled) StatsApi.start(config.statsApiPort, config.statsApiSnapshotPeriod)
+        if (config.dailyStatsEnabled) DailyStatsSnapshot.start(config.dailyStatsOutputPath, config.dailyStatsGitRepoPath)
     }
 
     internal fun initializeOnlinePlayers() {
@@ -275,6 +278,7 @@ object Nodes {
             IncomeManager.stop()
             Nametag.stop()
             StatsApi.stop()
+            DailyStatsSnapshot.stop()
             MiningBoostManager.stop()
         }
         cleanupStage(CleanupStage.RESIDENTS) {

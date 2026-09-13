@@ -237,6 +237,23 @@ data class NodesConfig(
     // How often the snapshot served by the API is refreshed. Data is this stale at worst;
     // fine for a stats page/command, not meant for live combat numbers.
     val statsApiSnapshotPeriod: Long = 10800000, // 3 hours
+
+    // ===================================
+    // daily player/nation stats snapshot -- see docs/STATS.md
+    // ===================================
+    // Off by default, same reasoning as statsApiEnabled -- test/local runs never touch disk
+    // or a git remote unless a live deploy opts in.
+    val dailyStatsEnabled: Boolean = false,
+
+    // Where the JSON snapshot is written every night. The bot reads this file directly
+    // (same VM) regardless of whether dailyStatsGitRepoPath is configured below.
+    val dailyStatsOutputPath: Path = Paths.get("nodisium-data/stats/daily-stats.json"),
+
+    // Local clone of the small public repo (e.g. DCFiendish/nodisium-stats) whose GitHub
+    // Pages serves this JSON to the website. Null = skip the git publish step entirely (the
+    // local file above still gets written either way) -- set once the repo/deploy key are
+    // set up on the VM, see docs/STATS.md.
+    val dailyStatsGitRepoPath: Path? = null,
 ) {
     // folder for backups of json state files
     val pathBackup: Path get() = Paths.get(path, "backup").normalize()

@@ -103,6 +103,10 @@ class Nation(
             color: Color?,
             towns: ArrayList<String>,
             reservedTerritoryIds: ArrayList<Int> = arrayListOf(),
+            kills: Int = 0,
+            deaths: Int = 0,
+            nodesCaptured: Int = 0,
+            nodesLost: Int = 0,
         ): Nation {
             val capital = if (capitalName != null) {
                 Town.fromName(capitalName) ?: throw net.aechronis.nodes.constants.ErrorTownDoesNotExist
@@ -110,6 +114,10 @@ class Nation(
                 null
             }
             val nation = Nation(uuid, name, capital)
+            nation.kills = kills
+            nation.deaths = deaths
+            nation.nodesCaptured = nodesCaptured
+            nation.nodesLost = nodesLost
             Nodes.nations[name] = nation
             if (capital != null) Town.initializeCapitalLives(capital)
             if (color != null) nation.color = color
@@ -280,6 +288,36 @@ class Nation(
             return Result.success(town)
         }
 
+        // ===================================
+        // Combat/war stats -- see docs/STATS.md. Historical: incremented at the same event
+        // sites as the matching Resident-level counters, never derived from current
+        // membership, so they don't shrink when a member/town leaves the nation.
+        // ===================================
+
+        internal fun addKill(nation: Nation) {
+            nation.kills++
+            nation.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addDeath(nation: Nation) {
+            nation.deaths++
+            nation.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addNodeCaptured(nation: Nation) {
+            nation.nodesCaptured++
+            nation.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addNodeLost(nation: Nation) {
+            nation.nodesLost++
+            nation.needsUpdate()
+            Nodes.needsSave = true
+        }
+
         fun setColor(nation: Nation, r: Int, g: Int, b: Int) {
             nation.color = Color(r, g, b)
             nation.needsUpdate()
@@ -412,6 +450,12 @@ class Nation(
     // Source of truth for Territory.reservedNation -- see reserveTerritory/unreserveTerritory.
     val reservedTerritories: MutableSet<TerritoryId> = ConcurrentHashMap.newKeySet()
 
+    // combat/war stats -- see docs/STATS.md. Persisted via NationSaveState.
+    var kills: Int = 0
+    var deaths: Int = 0
+    var nodesCaptured: Int = 0
+    var nodesLost: Int = 0
+
     // color for displaying on map
     // assign random color by default
     var color: Color = Color(
@@ -482,6 +526,10 @@ class Nation(
         val allies = n.allies.map { x -> x.name }
         val enemies = n.enemies.map { x -> x.name }
         val reservedTerritories = n.reservedTerritories.map { it.toInt() }
+        val kills = n.kills
+        val deaths = n.deaths
+        val nodesCaptured = n.nodesCaptured
+        val nodesLost = n.nodesLost
 
         override var jsonString: String? = null
 
@@ -503,7 +551,11 @@ class Nation(
                     "\"towns\":$towns," +
                     "\"allies\":$allies," +
                     "\"enemies\":$enemies," +
-                    "\"reservedTerritories\":$reservedTerritories" +
+                    "\"reservedTerritories\":$reservedTerritories," +
+                    "\"kills\":${this.kills}," +
+                    "\"deaths\":${this.deaths}," +
+                    "\"nodesCaptured\":${this.nodesCaptured}," +
+                    "\"nodesLost\":${this.nodesLost}" +
                     "}"
                 )
 

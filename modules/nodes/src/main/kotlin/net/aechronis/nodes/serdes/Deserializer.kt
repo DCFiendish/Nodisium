@@ -104,12 +104,23 @@ object Deserializer {
                     }
                 }
 
+                val kills = resident.get("kills")?.asInt ?: 0
+                val deaths = resident.get("deaths")?.asInt ?: 0
+                val capsPlaced = resident.get("capsPlaced")?.asInt ?: 0
+                val attacksDefended = resident.get("attacksDefended")?.asInt ?: 0
+                val playtimeMs = resident.get("playtimeMs")?.asLong ?: 0L
+
                 Resident.load(
                     UUID.fromString(uuid),
                     name,
                     trusted,
                     waypoints,
                     waypointVisibility,
+                    kills,
+                    deaths,
+                    capsPlaced,
+                    attacksDefended,
+                    playtimeMs,
                 )
             }
         }
@@ -446,6 +457,11 @@ object Deserializer {
                     }
                 }
 
+                val nationKills = nation.get("kills")?.asInt ?: 0
+                val nationDeaths = nation.get("deaths")?.asInt ?: 0
+                val nodesCaptured = nation.get("nodesCaptured")?.asInt ?: 0
+                val nodesLost = nation.get("nodesLost")?.asInt ?: 0
+
                 val nationObject = Nation.load(
                     uuid,
                     name,
@@ -453,6 +469,10 @@ object Deserializer {
                     color,
                     towns,
                     reservedTerritories,
+                    nationKills,
+                    nationDeaths,
+                    nodesCaptured,
+                    nodesLost,
                 )
 
                 nations.add(nationObject)

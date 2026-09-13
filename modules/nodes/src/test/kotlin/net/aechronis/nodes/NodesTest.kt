@@ -16,6 +16,7 @@ import net.aechronis.nodes.objects.Territory
 import net.aechronis.nodes.objects.TerritoryId
 import net.aechronis.nodes.objects.Town
 import net.aechronis.nodes.objects.WaypointSharing
+import net.aechronis.nodes.tasks.DailyStatsSnapshot
 import net.aechronis.nodes.war.AttackMode
 import net.aechronis.nodes.war.FlagWar
 import net.aechronis.nodes.war.TownDefeatOutcome
@@ -893,6 +894,149 @@ class NodesTest {
             assertTrue(towns.any { it.asJsonObject.get("name").asString == "London" })
         } finally {
             StatsApi.stop()
+        }
+    }
+
+    @Test
+    fun `resident and nation kill-death stats increment on the right side`() {
+        val suffix = UUID.randomUUID().toString().take(8)
+        val killerTerritory = Nodes.territories.values.first { it.town == null }
+        val killerTown = Town.create("KillerTown$suffix", killerTerritory, null).getOrThrow()
+        val killerNation = Nation.create("KillerNation$suffix", killerTown).getOrThrow()
+        val killer = Resident(UUID.randomUUID(), "Killer$suffix")
+        Nodes.residents[killer.uuid] = killer
+        Town.addResident(killerTown, killer)
+
+        try {
+            val beforeResidentKills = killer.kills
+            val beforeNationKills = killerNation.kills
+
+            Resident.addKill(killer)
+            killer.town?.nation?.let { Nation.addKill(it) }
+
+            assertEquals(beforeResidentKills + 1, killer.kills)
+            assertEquals(beforeNationKills + 1, killerNation.kills)
+            assertTrue(killer.getSaveState().createJsonString().contains("\"kills\":${killer.kills}"))
+            assertTrue(killerNation.getSaveState().createJsonString().contains("\"kills\":${killerNation.kills}"))
+        } finally {
+            Nodes.residents.remove(killer.uuid)
+            Nation.destroy(killerNation)
+            Town.destroy(killerTown)
+        }
+    }
+
+    @Test
+    fun `caps placed and attacks defended increment on the resident`() {
+        val resident = Resident(UUID.randomUUID(), "Flagbearer${UUID.randomUUID().toString().take(8)}")
+        Nodes.residents[resident.uuid] = resident
+        try {
+            assertEquals(0, resident.capsPlaced)
+            assertEquals(0, resident.attacksDefended)
+
+            Resident.addCapPlaced(resident)
+            Resident.addCapPlaced(resident)
+            Resident.addAttackDefended(resident)
+
+            assertEquals(2, resident.capsPlaced)
+            assertEquals(1, resident.attacksDefended)
+        } finally {
+            Nodes.residents.remove(resident.uuid)
+        }
+    }
+
+    @Test
+    fun `isDefendedBreak only credits a different real player breaking the flag`() {
+        val attacker = UUID.randomUUID()
+        val defender = UUID.randomUUID()
+
+        assertFalse(FlagWar.isDefendedBreak(attacker, null), "no breaker (system cancellation) is never a defended stat")
+        assertFalse(FlagWar.isDefendedBreak(attacker, attacker), "the attacker breaking their own flag is not a defended stat")
+        assertTrue(FlagWar.isDefendedBreak(attacker, defender), "a different player breaking the flag is a defended stat")
+    }
+
+    @Test
+    fun `town capture and release attribute node stats to the right nation`() {
+        val suffix = UUID.randomUUID().toString().take(8)
+        val ownerTerritory = Nodes.territories.values.first { it.town == null }
+        val ownerTown = Town.create("OwnerTown$suffix", ownerTerritory, null).getOrThrow()
+        val ownerNation = Nation.create("OwnerNation$suffix", ownerTown).getOrThrow()
+
+        val attackerTerritory = Nodes.territories.values.first { it.town == null }
+        val attackerTown = Town.create("AttackerTown$suffix", attackerTerritory, null).getOrThrow()
+        val attackerNation = Nation.create("AttackerNation$suffix", attackerTown).getOrThrow()
+
+        try {
+            val ownerCapturedBefore = ownerNation.nodesCaptured
+            val ownerLostBefore = ownerNation.nodesLost
+            val attackerCapturedBefore = attackerNation.nodesCaptured
+            val attackerLostBefore = attackerNation.nodesLost
+
+            // Attacker captures the owner's territory.
+            Town.capture(attackerTown, ownerTerritory)
+            assertEquals(attackerCapturedBefore + 1, attackerNation.nodesCaptured)
+            assertEquals(ownerLostBefore + 1, ownerNation.nodesLost)
+            assertEquals(attackerLostBefore, attackerNation.nodesLost)
+            assertEquals(ownerCapturedBefore, ownerNation.nodesCaptured)
+
+            // Owner liberates it back -- a capture for the owner's nation, a loss for the
+            // occupier being kicked out.
+            Town.release(ownerTerritory)
+            assertEquals(ownerCapturedBefore + 1, ownerNation.nodesCaptured)
+            assertEquals(attackerLostBefore + 1, attackerNation.nodesLost)
+        } finally {
+            ownerTerritory.occupier = null
+            Nation.destroy(ownerNation)
+            Nation.destroy(attackerNation)
+            Town.destroy(ownerTown)
+            Town.destroy(attackerTown)
+        }
+    }
+
+    @Test
+    fun `millisUntilNextMidnight is 24h on an ordinary day and short-or-long on a DST transition day`() {
+        val zone = java.time.ZoneId.of("America/New_York")
+
+        // Ordinary day, no DST transition: from 13:00 to the next midnight is a flat 11 hours.
+        val ordinaryDay = java.time.ZonedDateTime.of(2026, 6, 15, 13, 0, 0, 0, zone)
+        assertEquals(java.time.Duration.ofHours(11).toMillis(), DailyStatsSnapshot.millisUntilNextMidnight(ordinaryDay))
+
+        // Whatever the next real DST transition is, the calendar day it falls on is 23h
+        // (spring forward, a gap) or 25h (fall back, an overlap) long, not 24h -- verified
+        // generically instead of hardcoding a transition date that could silently go stale.
+        val transition = zone.rules.nextTransition(java.time.Instant.now())
+        val transitionDayStart = transition.dateTimeBefore.toLocalDate().atStartOfDay(zone)
+        val expected = if (transition.isGap) java.time.Duration.ofHours(23) else java.time.Duration.ofHours(25)
+        assertEquals(expected.toMillis(), DailyStatsSnapshot.millisUntilNextMidnight(transitionDayStart))
+    }
+
+    @Test
+    fun `daily stats payload includes players and nations with computed KD`() {
+        val suffix = UUID.randomUUID().toString().take(8)
+        val territory = Nodes.territories.values.first { it.town == null }
+        val town = Town.create("StatsPayloadTown$suffix", territory, null).getOrThrow()
+        val nation = Nation.create("StatsPayloadNation$suffix", town).getOrThrow()
+        val resident = Resident(UUID.randomUUID(), "StatsPayloadPlayer$suffix")
+        Nodes.residents[resident.uuid] = resident
+        Town.addResident(town, resident)
+
+        try {
+            Resident.addKill(resident)
+            Resident.addKill(resident)
+            // deaths stays 0 -- KD should fall back to raw kills, not divide by zero.
+
+            val payload = DailyStatsSnapshot.buildPayload()
+            val playerEntry = payload.players.first { it.uuid == resident.uuid.toString() }
+            assertEquals(2, playerEntry.kills)
+            assertEquals(2.0, playerEntry.kd)
+            assertEquals(town.name, playerEntry.town)
+            assertEquals(nation.name, playerEntry.nation)
+
+            val nationEntry = payload.nations.first { it.name == nation.name }
+            assertEquals(resident.totalPlaytimeMillis, nationEntry.playtimeMs)
+        } finally {
+            Nodes.residents.remove(resident.uuid)
+            Nation.destroy(nation)
+            Town.destroy(town)
         }
     }
 

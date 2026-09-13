@@ -88,7 +88,7 @@ object NodesWorldListener {
                             }
                         }
                     }
-                    attack.cancel()
+                    attack.cancel(player)
                     Message.broadcast("${ChatColor.GOLD}[War] Attack at (${blockPos.blockX}, ${blockPos.blockY}, ${blockPos.blockZ}) defeated by ${player.username}")
                     return
                 }

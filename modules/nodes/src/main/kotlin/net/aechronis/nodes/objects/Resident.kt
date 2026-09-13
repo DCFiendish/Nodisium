@@ -48,11 +48,21 @@ class Resident(val uuid: UUID, val name: String) {
             trusted: Boolean,
             waypoints: List<Waypoint> = emptyList(),
             waypointVisibility: Map<String, Boolean> = emptyMap(),
+            kills: Int = 0,
+            deaths: Int = 0,
+            capsPlaced: Int = 0,
+            attacksDefended: Int = 0,
+            totalPlaytimeMillis: Long = 0L,
         ) {
             val resident = Resident(uuid, name)
             resident.trusted = trusted
             resident.waypointVisibility.putAll(waypointVisibility)
             waypoints.forEach { waypoint -> resident.loadPermanentWaypoint(waypoint) }
+            resident.kills = kills
+            resident.deaths = deaths
+            resident.capsPlaced = capsPlaced
+            resident.attacksDefended = attacksDefended
+            resident.totalPlaytimeMillis = totalPlaytimeMillis
             resident.needsUpdate()
             Nodes.residents[uuid] = resident
         }
@@ -108,6 +118,50 @@ class Resident(val uuid: UUID, val name: String) {
 
         internal fun setTrust(resident: Resident, trust: Boolean) {
             resident.trusted = trust
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        // ===================================
+        // Combat/war stats -- see docs/STATS.md. kills/deaths/capsPlaced/attacksDefended/
+        // totalPlaytimeMillis are persisted (ResidentSaveState); sessionStartMillis is not
+        // (transient, set fresh on each join by NodesPlayerJoinQuitListener).
+        // ===================================
+
+        internal fun addKill(resident: Resident) {
+            resident.kills++
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addDeath(resident: Resident) {
+            resident.deaths++
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addCapPlaced(resident: Resident) {
+            resident.capsPlaced++
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun addAttackDefended(resident: Resident) {
+            resident.attacksDefended++
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        internal fun beginSession(resident: Resident) {
+            resident.sessionStartMillis = System.currentTimeMillis()
+        }
+
+        // No-op if beginSession was never called for this session (e.g. resident already
+        // offline, or a double-quit event) -- avoids crediting an unbounded/garbage duration.
+        internal fun endSession(resident: Resident) {
+            val start = resident.sessionStartMillis ?: return
+            resident.sessionStartMillis = null
+            resident.totalPlaytimeMillis += (System.currentTimeMillis() - start).coerceAtLeast(0)
             resident.needsUpdate()
             Nodes.needsSave = true
         }
@@ -308,6 +362,17 @@ class Resident(val uuid: UUID, val name: String) {
     var deathWaypoint: Waypoint? = null
         private set
 
+    // combat/war stats -- see docs/STATS.md. Persisted via ResidentSaveState.
+    var kills: Int = 0
+    var deaths: Int = 0
+    var capsPlaced: Int = 0
+    var attacksDefended: Int = 0
+    var totalPlaytimeMillis: Long = 0L
+
+    // Session-only, not persisted -- set on join, consumed (and cleared) on quit. Null
+    // whenever the player isn't currently in a tracked session (offline, or a double-quit).
+    var sessionStartMillis: Long? = null
+
     // save state needs update flag
     private var saveState = ResidentSaveState(this)
 
@@ -471,6 +536,11 @@ class Resident(val uuid: UUID, val name: String) {
         val trusted = r.trusted
         val waypoints = r.permanentWaypoints
         val waypointVisibility = r.waypointVisibility.toMap()
+        val kills = r.kills
+        val deaths = r.deaths
+        val capsPlaced = r.capsPlaced
+        val attacksDefended = r.attacksDefended
+        val totalPlaytimeMillis = r.totalPlaytimeMillis
 
         override var jsonString: String? = null
 
@@ -495,7 +565,12 @@ class Resident(val uuid: UUID, val name: String) {
                     "\"nation\":${this.nation?.let { JsonPrimitive(it) } ?: "null"}," +
                     "\"trust\":${this.trusted}," +
                     "\"waypoints\":$waypointsJson," +
-                    "\"waypointVisibility\":$waypointVisibilityJson" +
+                    "\"waypointVisibility\":$waypointVisibilityJson," +
+                    "\"kills\":${this.kills}," +
+                    "\"deaths\":${this.deaths}," +
+                    "\"capsPlaced\":${this.capsPlaced}," +
+                    "\"attacksDefended\":${this.attacksDefended}," +
+                    "\"playtimeMs\":${this.totalPlaytimeMillis}" +
                     "}"
                 )
         }

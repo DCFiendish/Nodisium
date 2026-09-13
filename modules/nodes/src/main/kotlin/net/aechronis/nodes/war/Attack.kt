@@ -98,9 +98,9 @@ class Attack(
         FlagWar.attackTick(this)
     }
 
-    fun cancel() {
+    fun cancel(brokenBy: Player? = null) {
         this.thread.cancel()
-        FlagWar.cancelAttack(this)
+        FlagWar.cancelAttack(this, brokenBy)
     }
 
     // returns json format string as a fresh StringBuilder every call -- see the comment on

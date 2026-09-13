@@ -30,9 +30,15 @@ class NodesLiveModule : HotSwappableModule {
                 canInteractInEmpty = false,
                 canInteractInUnclaimed = false,
                 adminUsernames = setOf("DCFiendish"),
-                discordWarWebhookUrl = readWebhookUrl("discord_war_webhook.txt"),
-                discordChatWebhookUrl = readWebhookUrl("discord_chat_webhook.txt"),
+                discordWarWebhookUrl = readPlainConfigFile("discord_war_webhook.txt"),
+                discordChatWebhookUrl = readPlainConfigFile("discord_chat_webhook.txt"),
                 statsApiEnabled = true,
+                dailyStatsEnabled = true,
+                // Null (git publish skipped, local file still written) until the repo/deploy
+                // key are set up on the VM -- see docs/STATS.md. Same plain-file pattern as
+                // the webhook URLs above: not committed to source, not an env var (this
+                // deploy's Pterodactyl egg has no such startup variable).
+                dailyStatsGitRepoPath = readPlainConfigFile("daily_stats_git_repo_path.txt")?.let(java.nio.file.Paths::get),
             ),
         )
         TestWeapons.register()
@@ -41,7 +47,7 @@ class NodesLiveModule : HotSwappableModule {
     }
 
     // Plain file, not an env var -- see the field doc on NodesConfig.discordWarWebhookUrl.
-    private fun readWebhookUrl(fileName: String): String? =
+    private fun readPlainConfigFile(fileName: String): String? =
         runCatching { Files.readString(Paths.get("nodisium-data/$fileName")).trim() }
             .getOrNull()
             ?.takeIf { it.isNotBlank() }

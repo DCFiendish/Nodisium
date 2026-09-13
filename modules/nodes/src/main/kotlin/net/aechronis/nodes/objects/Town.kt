@@ -444,6 +444,10 @@ class Town(
 
         fun capture(town: Town, territory: Territory) {
             val current = territory.occupier
+            // Read before territory.occupier is reassigned below -- this is the actual land
+            // owner losing control to `town`'s occupation, not `current` (a previous
+            // occupier, if any). See docs/STATS.md for the nation-stats attribution rationale.
+            val previousOwner = territory.town
             if (current != null) {
                 current.captured.remove(territory.id)
                 territory.occupier = null
@@ -456,15 +460,25 @@ class Town(
             town.needsUpdate()
             Nodes.needsSave = true
             Resident.renderMinimaps()
+
+            town.nation?.let { Nation.addNodeCaptured(it) }
+            if (previousOwner != null && previousOwner.nation !== town.nation) {
+                previousOwner.nation?.let { Nation.addNodeLost(it) }
+            }
         }
 
         fun release(territory: Territory) {
-            territory.occupier?.let { town ->
-                town.captured.remove(territory.id)
+            territory.occupier?.let { occupier ->
+                occupier.captured.remove(territory.id)
                 territory.occupier = null
-                town.needsUpdate()
+                occupier.needsUpdate()
                 Nodes.needsSave = true
                 Resident.renderMinimaps()
+
+                // Liberation is a capture for the rightful owner's nation, and a loss for the
+                // occupier being kicked out -- see docs/STATS.md.
+                occupier.nation?.let { Nation.addNodeLost(it) }
+                territory.town?.takeIf { it.nation !== occupier.nation }?.nation?.let { Nation.addNodeCaptured(it) }
             }
         }
 

@@ -11,6 +11,7 @@ import net.aechronis.nodes.Message
 import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.chat.Chat
 import net.aechronis.nodes.objects.MiningBoostManager
+import net.aechronis.nodes.objects.Nation
 import net.aechronis.nodes.objects.Resident
 import net.aechronis.nodes.objects.Territory
 import net.aechronis.nodes.objects.WaypointMenu
@@ -33,6 +34,7 @@ object NodesPlayerJoinQuitListener {
 
         val resident: Resident = Resident.fromPlayer(player)!!
         Resident.setOnline(resident, player)
+        Resident.beginSession(resident)
         resident.createMinimap(player)
         Warzone.onPlayerTerritoryChanged(player, Territory.fromPlayer(player))
         MiningBoostManager.onPlayerJoin(player)
@@ -86,6 +88,17 @@ object NodesPlayerJoinQuitListener {
             "☠️ **${player.username}** died"
         }
         DiscordWebhook.send(Nodes.config.discordChatWebhookUrl, deathLine)
+
+        // combat stats -- see docs/STATS.md. Only PvP kills count against a killer; mob/
+        // environment/self deaths only increment the victim's death counter.
+        Resident.addDeath(resident)
+        resident.town?.nation?.let { Nation.addDeath(it) }
+        if (attacker is Player && attacker.uuid != player.uuid) {
+            Resident.fromPlayer(attacker)?.let { killer ->
+                Resident.addKill(killer)
+                killer.town?.nation?.let { Nation.addKill(it) }
+            }
+        }
     }
 
     fun onPlayerQuit(event: PlayerDisconnectEvent) {
@@ -97,6 +110,7 @@ object NodesPlayerJoinQuitListener {
             resident.clearDeathWaypoint()
             Resident.stopPlotSelection(resident)
             Resident.setOffline(resident, player)
+            Resident.endSession(resident)
         }
         WaypointMenu.close(player)
 
