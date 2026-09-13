@@ -7,6 +7,8 @@ import net.aechronis.nodes.testing.TestWeapons
 import net.minestom.server.MinecraftServer
 import net.nodisium.server.modules.HotSwappableModule
 import net.nodisium.server.modules.ModuleContext
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * [HotSwappableModule] adapter around [Nodes] -- the boot config here is the same block that used
@@ -28,6 +30,7 @@ class NodesLiveModule : HotSwappableModule {
                 canInteractInEmpty = false,
                 canInteractInUnclaimed = false,
                 adminUsernames = setOf("DCFiendish"),
+                discordWarWebhookUrl = readDiscordWarWebhookUrl(),
             ),
         )
         TestWeapons.register()
@@ -37,6 +40,12 @@ class NodesLiveModule : HotSwappableModule {
         // /nodesadmin war enable first. Remove alongside LoadTestBots once real players take over.
         Nodes.enableWar()
     }
+
+    // Plain file, not an env var -- see the field doc on NodesConfig.discordWarWebhookUrl.
+    private fun readDiscordWarWebhookUrl(): String? =
+        runCatching { Files.readString(Paths.get("nodisium-data/discord_war_webhook.txt")).trim() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
 
     override fun shutdown() {
         testCommands.forEach(MinecraftServer.getCommandManager()::unregister)

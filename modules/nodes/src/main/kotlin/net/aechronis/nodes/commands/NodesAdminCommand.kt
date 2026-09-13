@@ -9,6 +9,7 @@
 
 package net.aechronis.nodes.commands
 
+import net.aechronis.nodes.DiscordWebhook
 import net.aechronis.nodes.Message
 import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.commands.arguments.ArgumentNation
@@ -103,6 +104,7 @@ class NodesAdminWarEnableCommand : NodesCommand("enable", "nodes.admin") {
         addConsoleSyntax({ sender, context ->
             FlagWar.enable(canAnnexTerritories = true, canOnlyAttackBorders = false, destructionEnabled = true)
             Message.broadcast("${ChatColor.DARK_RED}${ChatColor.BOLD}Nodes war enabled")
+            DiscordWebhook.send(Nodes.config.discordWarWebhookUrl, "⚔️ War has started!")
 
             // play MENACING wither spawn sound
             Audiences.all().playSound(Sound.sound(Key.key("entity.wither.spawn"), Sound.Source.PLAYER, 1.0f, 1.0f))
@@ -120,6 +122,7 @@ class NodesAdminWarDisableCommand : NodesCommand("disable", "nodes.admin") {
             if (FlagWar.enabled) {
                 FlagWar.disable()
                 Message.broadcast("${ChatColor.BOLD}Nodes war disabled")
+                DiscordWebhook.send(Nodes.config.discordWarWebhookUrl, "🏳️ War has ended.")
             } else {
                 Message.error(sender, "Nodes war already disabled")
             }

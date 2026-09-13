@@ -168,6 +168,13 @@ data class NodesConfig(
     // allow leaving towns/natiosn during war
     val canLeaveTownDuringWar: Boolean = false,
 
+    // Discord webhook URL for war start/end notifications. Null = disabled. Not
+    // an env var: this server's Pterodactyl egg has no such startup variable and
+    // adding one needs panel admin access this deploy doesn't have -- read from a
+    // plain file instead (nodisium-data/discord_war_webhook.txt, see
+    // NodesLiveModule) so the URL is never committed to source either way.
+    val discordWarWebhookUrl: String? = null,
+
     // usernames that bypass all break/place permission checks. Empty by default --
     // must be explicitly configured per-deploy, never on for the default player.
     val adminUsernames: Set<String> = emptySet(),
