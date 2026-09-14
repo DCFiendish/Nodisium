@@ -3,7 +3,10 @@ package net.aechronis.nodes.listeners
 import net.aechronis.nodes.Message
 import net.aechronis.nodes.Nodes
 import net.aechronis.nodes.constants.DiplomaticRelationship
+import net.aechronis.nodes.objects.Territory
+import net.aechronis.nodes.objects.TerritoryChunk
 import net.aechronis.nodes.objects.Town
+import net.aechronis.nodes.war.Warzone
 import net.minestom.server.entity.Player
 import net.minestom.server.event.entity.EntityDamageEvent
 
@@ -13,6 +16,14 @@ object NodesPlayerDamageListener {
         val attacker = event.damage.attacker
 
         if (victim !is Player || attacker !is Player) return
+
+        // an active siege/warzone lets combatants fight regardless of nation/ally ties --
+        // otherwise two players sharing a nation/alliance could be unable to damage each
+        // other mid-attack, defeating the point of the siege
+        val pos = victim.position
+        val territory = Territory.fromBlock(pos.blockX(), pos.blockZ())
+        val territoryChunk = TerritoryChunk.fromBlock(pos.blockX(), pos.blockZ())
+        if (territoryChunk?.attacker !== null || (territory !== null && Warzone.isActive(territory))) return
 
         // if relationship is ally, town or nation, and config specifies it, cancel event and notify attacker
         val relationship = Town.relationshipOfPlayerToPlayer(victim, attacker)

@@ -647,8 +647,10 @@ class TownSpawn : NodesCommand("spawn") {
             }
 
             resident.teleportThread = MinecraftServer.getSchedulerManager().buildTask {
-                player.teleport(town.spawnpoint)
+                // clear before teleporting -- the teleport itself fires EntityTeleportEvent,
+                // whose handler cancels any still-pending warmup it finds
                 resident.teleportThread = null
+                player.teleport(town.spawnpoint)
             }
                 .delay(TaskSchedule.millis(teleportTime))
                 .schedule()

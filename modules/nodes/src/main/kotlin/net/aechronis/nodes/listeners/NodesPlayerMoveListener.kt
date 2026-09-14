@@ -23,6 +23,15 @@ object NodesPlayerMoveListener {
             minimap.updateWaypointDisplayTransforms(event.newPosition)
         }
 
+        // player moved at all (sub-block strafing/knockback included) -> cancel any home
+        // teleport warmup, checked before the block-change early-return below so edge-standing
+        // and small movements can't dodge this anti-combat-log guarantee
+        if (resident.teleportThread !== null && event.newPosition.distanceSquared(player.position) > 0.0) {
+            resident.teleportThread?.cancel()
+            resident.teleportThread = null
+            Message.error(event.player, "You moved, teleport cancelled")
+        }
+
         // abort if did not change blocks
         val fromX = player.position.blockX()
         val fromY = player.position.blockY()
@@ -35,13 +44,6 @@ object NodesPlayerMoveListener {
         }
 
         // handle event effects
-
-        // player moved -> cancel any home teleport
-        resident.teleportThread?.let { thread ->
-            thread.cancel()
-            resident.teleportThread = null
-            Message.error(event.player, "You moved, teleport cancelled")
-        }
 
         // check if player chunk changed
         val fromCoord = Coord.fromBlockCoords(fromX, fromZ)
@@ -60,6 +62,15 @@ object NodesPlayerMoveListener {
         resident.minimap?.let { minimap ->
             minimap.updateYaw(event.newPosition.yaw)
             minimap.updateWaypointDisplayTransforms(event.newPosition)
+        }
+
+        // any other teleport (admin /t spawn, plugin teleport, etc.) cancels a pending home
+        // teleport warmup too. The warmup's own completion clears teleportThread before calling
+        // player.teleport(...) (see TownCommand's TownSpawn), so this never self-cancels.
+        if (resident.teleportThread !== null) {
+            resident.teleportThread?.cancel()
+            resident.teleportThread = null
+            Message.error(player, "You moved, teleport cancelled")
         }
 
         // abort if did not change blocks

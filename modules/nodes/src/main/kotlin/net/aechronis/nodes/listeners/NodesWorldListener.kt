@@ -405,11 +405,12 @@ object NodesWorldListener {
         val town: Town? = territory?.town
 
         // interacting in areas with no territory or no town
-        // DO NOT USE WILDERNESS PERMISSIONS
-        if (territory === null) {
-            return
-        }
         if (town === null) {
+            if (hasWildernessPermissions(territory)) {
+                return
+            }
+            event.isCancelled = true
+            Message.error(event.player, "You cannot interact here!")
             return
         }
 
