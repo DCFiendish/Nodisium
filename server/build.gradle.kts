@@ -70,7 +70,7 @@ application {
 // each module's own :jar output as part of the normal build, so a plain build/run still boots
 // correctly without a manual copy step -- the same directory a live deploy overwrites one jar at a
 // time to hot-swap a single module (see .claude/skills/nodisium-ops).
-val moduleIds = listOf("vanilla", "combat", "worldedit", "nodes")
+val moduleIds = listOf("vanilla", "combat", "worldedit", "nodes", "watchdog", "logger")
 
 val syncModuleJars by tasks.registering(Copy::class) {
     moduleIds.forEach { id ->

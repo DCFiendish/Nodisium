@@ -37,6 +37,12 @@ object ModuleManager {
         // moved in from server's own Main.kt once server stopped compiling against any module --
         // see that file's kdoc.
         ModuleDescriptor("nodes", "net.aechronis.nodes.NodesLiveModule", dependsOn = setOf("vanilla", "combat")),
+        ModuleDescriptor("watchdog", "net.aechronis.watchdog.WatchdogLiveModule"),
+        ModuleDescriptor(
+            "logger",
+            "net.aechronis.logger.LoggerLiveModule",
+            dependsOn = setOf("vanilla", "worldedit"),
+        ),
     ).associateBy { it.id }
 
     // Dependency-safe boot order, computed once from the static graph above rather than hardcoded
