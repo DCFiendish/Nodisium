@@ -53,6 +53,7 @@ class Resident(val uuid: UUID, val name: String) {
             capsPlaced: Int = 0,
             attacksDefended: Int = 0,
             totalPlaytimeMillis: Long = 0L,
+            blockCoins: Long = 0L,
         ) {
             val resident = Resident(uuid, name)
             resident.trusted = trusted
@@ -63,6 +64,7 @@ class Resident(val uuid: UUID, val name: String) {
             resident.capsPlaced = capsPlaced
             resident.attacksDefended = attacksDefended
             resident.totalPlaytimeMillis = totalPlaytimeMillis
+            resident.blockCoins = blockCoins
             resident.needsUpdate()
             Nodes.residents[uuid] = resident
         }
@@ -148,6 +150,28 @@ class Resident(val uuid: UUID, val name: String) {
 
         internal fun addAttackDefended(resident: Resident) {
             resident.attacksDefended++
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        // ===================================
+        // Block shop currency -- see BlockShop.kt/SellCommand.kt/BlockShopCommand.kt.
+        // Earned only by selling SELLABLE_BLOCKS (nodes.sell) and spent 1-for-1 on
+        // PURCHASABLE_BLOCKS (nodes.blockshop).
+        // ===================================
+
+        internal fun addBlockCoins(resident: Resident, amount: Long) {
+            if (amount <= 0) return
+            resident.blockCoins += amount
+            resident.needsUpdate()
+            Nodes.needsSave = true
+        }
+
+        // Caller must have already verified resident.blockCoins >= amount before calling --
+        // this does not clamp or refuse, matching addKill/addDeath's "trust the caller" style.
+        internal fun removeBlockCoins(resident: Resident, amount: Long) {
+            if (amount <= 0) return
+            resident.blockCoins -= amount
             resident.needsUpdate()
             Nodes.needsSave = true
         }
@@ -369,6 +393,9 @@ class Resident(val uuid: UUID, val name: String) {
     var attacksDefended: Int = 0
     var totalPlaytimeMillis: Long = 0L
 
+    // block shop currency -- persisted via ResidentSaveState. See addBlockCoins/removeBlockCoins.
+    var blockCoins: Long = 0L
+
     // Session-only, not persisted -- set on join, consumed (and cleared) on quit. Null
     // whenever the player isn't currently in a tracked session (offline, or a double-quit).
     var sessionStartMillis: Long? = null
@@ -541,6 +568,7 @@ class Resident(val uuid: UUID, val name: String) {
         val capsPlaced = r.capsPlaced
         val attacksDefended = r.attacksDefended
         val totalPlaytimeMillis = r.totalPlaytimeMillis
+        val blockCoins = r.blockCoins
 
         override var jsonString: String? = null
 
@@ -570,7 +598,8 @@ class Resident(val uuid: UUID, val name: String) {
                     "\"deaths\":${this.deaths}," +
                     "\"capsPlaced\":${this.capsPlaced}," +
                     "\"attacksDefended\":${this.attacksDefended}," +
-                    "\"playtimeMs\":${this.totalPlaytimeMillis}" +
+                    "\"playtimeMs\":${this.totalPlaytimeMillis}," +
+                    "\"blockCoins\":${this.blockCoins}" +
                     "}"
                 )
         }

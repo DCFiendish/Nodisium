@@ -109,6 +109,7 @@ object Deserializer {
                 val capsPlaced = resident.get("capsPlaced")?.asInt ?: 0
                 val attacksDefended = resident.get("attacksDefended")?.asInt ?: 0
                 val playtimeMs = resident.get("playtimeMs")?.asLong ?: 0L
+                val blockCoins = resident.get("blockCoins")?.asLong ?: 0L
 
                 Resident.load(
                     UUID.fromString(uuid),
@@ -121,6 +122,7 @@ object Deserializer {
                     capsPlaced,
                     attacksDefended,
                     playtimeMs,
+                    blockCoins,
                 )
             }
         }

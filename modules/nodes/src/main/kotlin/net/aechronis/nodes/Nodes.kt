@@ -7,12 +7,14 @@ package net.aechronis.nodes
 import com.google.gson.JsonObject
 import net.aechronis.nodes.commands.AllyChatCommand
 import net.aechronis.nodes.commands.AllyCommand
+import net.aechronis.nodes.commands.BlockShopCommand
 import net.aechronis.nodes.commands.GlobalChatCommand
 import net.aechronis.nodes.commands.NationChatCommand
 import net.aechronis.nodes.commands.NationCommand
 import net.aechronis.nodes.commands.NodesAdminCommand
 import net.aechronis.nodes.commands.PlayerCommand
 import net.aechronis.nodes.commands.PortCommand
+import net.aechronis.nodes.commands.SellCommand
 import net.aechronis.nodes.commands.TerritoryCommand
 import net.aechronis.nodes.commands.TownChatCommand
 import net.aechronis.nodes.commands.TownCommand
@@ -29,6 +31,7 @@ import net.aechronis.nodes.listeners.NodesPlayerMoveListener
 import net.aechronis.nodes.listeners.NodesPlotSelectionListener
 import net.aechronis.nodes.listeners.NodesVanillaStorageBridge
 import net.aechronis.nodes.listeners.NodesWorldListener
+import net.aechronis.nodes.objects.BlockShop
 import net.aechronis.nodes.objects.Building
 import net.aechronis.nodes.objects.Coord
 import net.aechronis.nodes.objects.MinimapPassengerTracker
@@ -194,6 +197,7 @@ object Nodes {
         NodesWorldListener.init()
         NodesVanillaStorageBridge.init()
         WaypointMenu.init()
+        BlockShop.init()
         commands = listOf(
             TownCommand(),
             NationCommand(),
@@ -209,6 +213,8 @@ object Nodes {
             PortCommand(),
             WaypointCommand(),
             WarzoneCommand(),
+            BlockShopCommand(),
+            SellCommand(),
         )
         commands.forEach(MinecraftServer.getCommandManager()::register)
         lastBackupTime = loadLongFromFile(config.pathLastBackupTime) ?: System.currentTimeMillis()
