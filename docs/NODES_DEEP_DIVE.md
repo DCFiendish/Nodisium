@@ -129,7 +129,7 @@ None of this exists in the original phonon design (Part 1) or in the pre-branch 
 
 ### LOW
 
-**Re-checked in full 2026-09-14** — of the 21 original items, 9 were already fixed (marked below) and 1 (`IncomeInventory`'s dupe race) is superseded by a rewrite. The remaining 11 below are confirmed still open against current code.
+**Re-checked in full 2026-09-14** — of the 21 original items, 9 were already fixed and 2 more (chat-announcement cooldown, unreachable null checks) fixed this pass; 1 (`IncomeInventory`'s dupe race) is superseded by a rewrite. The remaining 9 below are confirmed still open against current code.
 
 **Fixed 2026-09-12** (found and closed in the same pass as the C3 correction above, not part of the original LOW list): `NodesChestProtectListener.onBlockInteract`'s `Resident.fromPlayer(player)!!` could NPE if a block-interact event lands mid-`/nodesadmin load` (window where `Nodes.residents` is cleared but not yet repopulated, on a different thread than the event) — now `?: return`. `Chat.process()` indexed `msg[0]` for the greentext check with no empty-string guard — now `msg.isNotEmpty() && msg[0] == '>'`.
 
@@ -147,11 +147,11 @@ None of this exists in the original phonon design (Part 1) or in the pre-branch 
 - ~~Sky beacon silently fails to render for a flag placed roughly Y 206–252~~ **FIXED** — `war/FlagWar.kt:1004` now clamps `y0` itself (`.coerceAtMost(255)`) instead of only truncating `yEnd`, with an in-source comment explaining the old empty-range bug.
 - No per-territory/per-defender cap on simultaneous attacks — a numerically larger side can trivially field dozens of simultaneous attackers against one territory's border chunks, more a balance question than a bug given the 200-player target.
 - ~~Sub-block movement doesn't cancel a pending teleport warmup on plugin-driven teleports (`EntityTeleportEvent`)~~ **FIXED** — folded into the same M12 fix above; `onPlayerTeleport` (`NodesPlayerMoveListener.kt:70`) now cancels on any teleport event.
-- No cooldown on territory-crossing chat announcements — rubber-banding or edge-riding across a chunk border can spam repeated enter/leave messages to oneself.
+- ~~No cooldown on territory-crossing chat announcements~~ **FIXED 2026-09-14** — `NodesPlayerMoveListener.kt` now debounces per-resident (`TERRITORY_ANNOUNCE_COOLDOWN_MS = 2000L`), suppressing a repeat announcement within 2s of the last one sent to that player.
 - ~~`OreSampler`'s Y-range fill loop off-by-one~~ **FIXED 2026-09-14** — loop bound corrected to `yStart <= Y_WORLD_MAX` (`objects/OreSampler.kt:168`, in-source comment explains the old bug). `NodesTest.kt`'s "ore sampler returns nothing outside the world height bounds" test passes on current `master`.
 - ~~No cap on simultaneous outstanding town applications~~ **FIXED** — `commands/TownCommand.kt:227-231` blocks a resident from applying to a second town while they have any pending application elsewhere, server-wide (one outstanding application at a time).
 - ~~`TownInviteCommand`'s self-invite error message is copy-pasted from an unrelated scenario~~ **FIXED** — `commands/TownCommand.kt:283-285` now says "You cannot invite yourself", in-source comment explains the old copy-paste.
-- A handful of now-unreachable null checks in command code (`ArgumentResident`/`ArgumentTown`/etc. can never actually resolve to null given how they're implemented) — harmless, but a sign of copy-paste from an older resolution model, worth cleaning up so it isn't misread as meaningful defensive logic later.
+- ~~A handful of now-unreachable null checks in command code~~ **FIXED 2026-09-14** — removed the two dead `context[playerArg] == null` checks in `commands/TownCommand.kt` (`TownKickCommand`, town-trust command), both unreachable since `ArgumentResident` throws `ArgumentSyntaxException` rather than ever resolving to null.
 - `WarSerializer` keys occupied-chunk records by town *name* (a string) — if towns can be renamed, an occupied-chunk record could silently fail to resolve back to its town on the next load, reverting the territory to unoccupied with no liberation message.
 - Hardcoded exhaustive `when` blocks on the two current minimap zoom scales (4/12) will throw if a third scale is ever added without updating every site — a maintenance trap, not a current bug.
 

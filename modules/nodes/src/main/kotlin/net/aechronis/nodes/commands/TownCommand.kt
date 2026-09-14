@@ -595,11 +595,6 @@ class TownKickCommand : NodesCommand("kick") {
             }
 
             // get other resident
-            if (context[playerArg] === null) {
-                Message.error(player, "Player not found")
-                return@addSyntax
-            }
-
             val targetTown = context[playerArg].town
             if (targetTown !== town) {
                 Message.error(player, "Player is not in this town")
@@ -969,11 +964,6 @@ class TownUntrustCommand : NodesCommand("untrust") {
             }
 
             // get other resident
-            if (context[playerArg] == null) {
-                Message.error(player, "Player not found")
-                return@addSyntax
-            }
-
             val targetTown = context[playerArg].town
             if (targetTown !== town) {
                 Message.error(player, "Player is not in this town")

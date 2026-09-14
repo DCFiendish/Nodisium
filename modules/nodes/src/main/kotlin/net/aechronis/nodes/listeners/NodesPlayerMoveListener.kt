@@ -13,6 +13,13 @@ import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
 import net.minestom.server.event.entity.EntityTeleportEvent
 import net.minestom.server.event.player.PlayerMoveEvent
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+
+// Rubber-banding or edge-riding across a chunk border can otherwise spam repeated
+// enter/leave messages to a player crossing the same border back and forth.
+private const val TERRITORY_ANNOUNCE_COOLDOWN_MS = 2000L
+private val lastTerritoryAnnounceAt = ConcurrentHashMap<UUID, Long>()
 
 object NodesPlayerMoveListener {
     private fun onPlayerMove(event: PlayerMoveEvent) {
@@ -105,20 +112,28 @@ object NodesPlayerMoveListener {
         if (fromTerritory != null && toTerritory != null) {
             val toTown = toTerritory.town
             val fromTown = fromTerritory.town
+            val announce = { action: () -> Unit ->
+                val now = System.currentTimeMillis()
+                val last = lastTerritoryAnnounceAt[resident.uuid]
+                if (last == null || now - last >= TERRITORY_ANNOUNCE_COOLDOWN_MS) {
+                    lastTerritoryAnnounceAt[resident.uuid] = now
+                    action()
+                }
+            }
             if (toTerritory.name != fromTerritory.name) {
                 if (toTown != null) {
-                    printTownMessage(player, resident, toTown, toTerritory)
+                    announce { printTownMessage(player, resident, toTown, toTerritory) }
                 } else {
-                    Message.announcement(player, "${ChatColor.GRAY}${toTerritory.name}")
+                    announce { Message.announcement(player, "${ChatColor.GRAY}${toTerritory.name}") }
                 }
             } else if (fromTown !== null && toTown !== null) {
                 if (toTown !== fromTown || fromTerritory.occupier !== toTerritory.occupier) {
-                    printTownMessage(player, resident, toTown, toTerritory)
+                    announce { printTownMessage(player, resident, toTown, toTerritory) }
                 }
             } else if (fromTown !== null && toTown === null) {
-                Message.announcement(player, "${ChatColor.GRAY}Wilderness")
+                announce { Message.announcement(player, "${ChatColor.GRAY}Wilderness") }
             } else if (toTown !== null) {
-                printTownMessage(player, resident, toTown, toTerritory)
+                announce { printTownMessage(player, resident, toTown, toTerritory) }
             }
         }
 
