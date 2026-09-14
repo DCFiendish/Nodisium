@@ -22,8 +22,12 @@ class Teleport : Command("teleport", "vanilla.teleport", "tp") {
 
         // teleport self to other player
         addSyntax({ sender: Player, context ->
-            val pos = context[playerAArg].findFirstPlayer(sender)?.position
-            sender.teleport(pos)
+            val target =
+                context[playerAArg].findFirstPlayer(sender) ?: run {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED))
+                    return@addSyntax
+                }
+            sender.teleport(target.position)
         }, playerAArg)
 
         // teleport self to coords
@@ -34,16 +38,28 @@ class Teleport : Command("teleport", "vanilla.teleport", "tp") {
 
         // teleport player to other player
         addSyntax({ sender: Player, context ->
-            val player = context[playerAArg].findFirstPlayer(sender)
-            val pos = context[playerBArg].findFirstPlayer(sender)?.position
-            player?.teleport(pos)
+            val player =
+                context[playerAArg].findFirstPlayer(sender) ?: run {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED))
+                    return@addSyntax
+                }
+            val target =
+                context[playerBArg].findFirstPlayer(sender) ?: run {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED))
+                    return@addSyntax
+                }
+            player.teleport(target.position)
         }, playerAArg, playerBArg)
 
         // teleport player to coords
         addSyntax({ sender: Player, context ->
-            val player = context[playerAArg].findFirstPlayer(sender)
-            val pos = context[posArg].from(player?.position).asPos()
-            player?.teleport(pos)
+            val player =
+                context[playerAArg].findFirstPlayer(sender) ?: run {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED))
+                    return@addSyntax
+                }
+            val pos = context[posArg].from(player.position).asPos()
+            player.teleport(pos)
         }, playerAArg, posArg)
     }
 }

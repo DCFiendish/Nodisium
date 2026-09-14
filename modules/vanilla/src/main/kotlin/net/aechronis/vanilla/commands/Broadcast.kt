@@ -7,6 +7,8 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.command.builder.arguments.ArgumentType
 import net.minestom.server.entity.Player
 
+private const val MAX_BROADCAST_LENGTH = 512
+
 class Broadcast : Command("broadcast", "vanilla.broadcast") {
     val messageArg = ArgumentType.StringArray("message")
 
@@ -18,6 +20,10 @@ class Broadcast : Command("broadcast", "vanilla.broadcast") {
 
         addSyntax({ sender: Player, context ->
             val text = context.get(messageArg).joinToString(" ")
+            if (text.length > MAX_BROADCAST_LENGTH) {
+                sender.sendMessage(Component.text("Message too long (max $MAX_BROADCAST_LENGTH characters).", NamedTextColor.RED))
+                return@addSyntax
+            }
             val component =
                 Component
                     .text("[brodcast] ", NamedTextColor.GOLD)
